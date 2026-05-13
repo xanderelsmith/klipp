@@ -15,6 +15,7 @@ class ConverterController extends ChangeNotifier {
   bool _exportToSameDir = false;
   bool _isConverting = false;
   bool _isDragging = false;
+  String? _lastOutputFile;
 
   ConverterController({
     required this.recorder,
@@ -28,6 +29,7 @@ class ConverterController extends ChangeNotifier {
   bool get exportToSameDir => _exportToSameDir;
   bool get isConverting => _isConverting;
   bool get isDragging => _isDragging;
+  String? get lastOutputFile => _lastOutputFile;
 
   set inputFile(String? file) {
     _inputFile = file;
@@ -90,6 +92,8 @@ class ConverterController extends ChangeNotifier {
         outputPath: outPath,
         compress: _compress,
       );
+      
+      _lastOutputFile = outPath;
 
       AppLogger.info('Conversion completed successfully');
       onConversionCompleted();

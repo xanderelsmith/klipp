@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:window_manager/window_manager.dart';
@@ -52,25 +54,29 @@ class _RegionSelectorPageState extends State<RegionSelectorPage>
   void initState() {
     super.initState();
     windowManager.addListener(this);
-    
+
     // Default 800x600 centered rectangle
     _selectionRect = const Rect.fromLTWH(240, 60, 800, 600);
-    
+
     _startMouseTracking();
   }
 
+  bool _isIgnoringMouseEvents = false;
+
   void _startMouseTracking() {
-    _mouseTracker = Timer.periodic(const Duration(milliseconds: 100), (timer) async {
+    _mouseTracker = Timer.periodic(const Duration(milliseconds: 50), (
+      timer,
+    ) async {
       if (!mounted) return;
 
       final mousePos = await screenRetriever.getCursorScreenPoint();
-      
+
       // Calculate active zones
       // Zones are: Drag bar, Toolbar, Resize handles
-      
+
       // Expand rect slightly for handles
       final expandedRect = _selectionRect.inflate(_handleSize);
-      
+
       // Drag Bar Zone
       final dragBarZone = Rect.fromLTWH(
         _selectionRect.left,
@@ -87,7 +93,8 @@ class _RegionSelectorPageState extends State<RegionSelectorPage>
         _toolbarHeight + 10,
       );
 
-      bool isOverInteractionZone = expandedRect.contains(mousePos) ||
+      bool isOverInteractionZone =
+          expandedRect.contains(mousePos) ||
           dragBarZone.contains(mousePos) ||
           toolbarZone.contains(mousePos);
 
@@ -101,7 +108,15 @@ class _RegionSelectorPageState extends State<RegionSelectorPage>
         isOverInteractionZone = true;
       }
 
-      await windowManager.setIgnoreMouseEvents(!isOverInteractionZone);
+      if (isOverInteractionZone && _isIgnoringMouseEvents) {
+        _isIgnoringMouseEvents = false;
+        await windowManager.setIgnoreMouseEvents(false);
+        // Force focus so the next click is a direct interaction, not a focus-gain click
+        await windowManager.focus();
+      } else if (!isOverInteractionZone && !_isIgnoringMouseEvents) {
+        _isIgnoringMouseEvents = true;
+        await windowManager.setIgnoreMouseEvents(true);
+      }
     });
   }
 
@@ -198,10 +213,20 @@ class _RegionSelectorPageState extends State<RegionSelectorPage>
 
       // Ensure minimum size
       if (_selectionRect.width < 50) {
-         _selectionRect = Rect.fromLTWH(_selectionRect.left, _selectionRect.top, 50, _selectionRect.height);
+        _selectionRect = Rect.fromLTWH(
+          _selectionRect.left,
+          _selectionRect.top,
+          50,
+          _selectionRect.height,
+        );
       }
       if (_selectionRect.height < 50) {
-         _selectionRect = Rect.fromLTWH(_selectionRect.left, _selectionRect.top, _selectionRect.width, 50);
+        _selectionRect = Rect.fromLTWH(
+          _selectionRect.left,
+          _selectionRect.top,
+          _selectionRect.width,
+          50,
+        );
       }
 
       widget.onRegionSelected(_selectionRect);
@@ -213,7 +238,8 @@ class _RegionSelectorPageState extends State<RegionSelectorPage>
     return KeyboardListener(
       focusNode: FocusNode()..requestFocus(),
       onKeyEvent: (event) {
-        if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.escape) {
+        if (event is KeyDownEvent &&
+            event.logicalKey == LogicalKeyboardKey.escape) {
           widget.onCancel();
         }
       },
@@ -246,10 +272,16 @@ class _RegionSelectorPageState extends State<RegionSelectorPage>
                     height: _dragBarHeight,
                     decoration: BoxDecoration(
                       color: Colors.red.withValues(alpha: 0.8),
-                      borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(4),
+                      ),
                     ),
                     child: const Center(
-                      child: Icon(Icons.drag_handle, color: Colors.white, size: 20),
+                      child: Icon(
+                        Icons.drag_handle,
+                        color: Colors.white,
+                        size: 20,
+                      ),
                     ),
                   ),
                 ),
@@ -265,7 +297,7 @@ class _RegionSelectorPageState extends State<RegionSelectorPage>
 
             // Close Button (Floating)
             if (!_isLocked)
-               Positioned(
+              Positioned(
                 top: _selectionRect.top - 40,
                 right: MediaQuery.of(context).size.width - _selectionRect.right,
                 child: IconButton(
@@ -284,15 +316,35 @@ class _RegionSelectorPageState extends State<RegionSelectorPage>
       children: [
         // Corners
         _buildHandle(Alignment.topLeft, _ResizeMode.topLeft, Icons.north_west),
-        _buildHandle(Alignment.topRight, _ResizeMode.topRight, Icons.north_east),
-        _buildHandle(Alignment.bottomLeft, _ResizeMode.bottomLeft, Icons.south_west),
-        _buildHandle(Alignment.bottomRight, _ResizeMode.bottomRight, Icons.south_east),
-        
+        _buildHandle(
+          Alignment.topRight,
+          _ResizeMode.topRight,
+          Icons.north_east,
+        ),
+        _buildHandle(
+          Alignment.bottomLeft,
+          _ResizeMode.bottomLeft,
+          Icons.south_west,
+        ),
+        _buildHandle(
+          Alignment.bottomRight,
+          _ResizeMode.bottomRight,
+          Icons.south_east,
+        ),
+
         // Midpoints
         _buildHandle(Alignment.topCenter, _ResizeMode.topCenter, Icons.north),
-        _buildHandle(Alignment.bottomCenter, _ResizeMode.bottomCenter, Icons.south),
+        _buildHandle(
+          Alignment.bottomCenter,
+          _ResizeMode.bottomCenter,
+          Icons.south,
+        ),
         _buildHandle(Alignment.centerLeft, _ResizeMode.centerLeft, Icons.west),
-        _buildHandle(Alignment.centerRight, _ResizeMode.centerRight, Icons.east),
+        _buildHandle(
+          Alignment.centerRight,
+          _ResizeMode.centerRight,
+          Icons.east,
+        ),
       ],
     );
   }
@@ -341,7 +393,9 @@ class _RegionSelectorPageState extends State<RegionSelectorPage>
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(),
                   icon: Icon(
-                    widget.controller.isRecording ? Icons.stop : Icons.fiber_manual_record,
+                    widget.controller.isRecording
+                        ? Icons.stop
+                        : Icons.fiber_manual_record,
                     color: Colors.red,
                     size: 24,
                   ),
@@ -349,19 +403,34 @@ class _RegionSelectorPageState extends State<RegionSelectorPage>
                     try {
                       final wasRecording = widget.controller.isRecording;
                       await widget.controller.toggleRecording();
-                      
-                      if (wasRecording && widget.controller.lastSavedFile != null) {
+
+                      if (wasRecording &&
+                          widget.controller.lastSavedFile != null) {
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                              content: Text('Recording saved: ${widget.controller.lastSavedFile!.split('\\').last}'),
+                              content: Text(
+                                'Recording saved: ${widget.controller.lastSavedFile!.split('\\').last}',
+                              ),
                               backgroundColor: Colors.green,
                               behavior: SnackBarBehavior.floating,
+                              action: SnackBarAction(
+                                label: 'VIEW',
+                                textColor: Colors.white,
+                                onPressed: () {
+                                  if (widget.controller.lastSavedFile != null) {
+                                    Process.run('explorer.exe', [
+                                      '/select,',
+                                      widget.controller.lastSavedFile!,
+                                    ]);
+                                  }
+                                },
+                              ),
                             ),
                           );
                         }
                       }
-                      
+
                       if (widget.controller.isRecording) {
                         setState(() => _isLocked = true);
                         widget.onIgnoreMouseEvents(true);
@@ -372,7 +441,10 @@ class _RegionSelectorPageState extends State<RegionSelectorPage>
                     } catch (e) {
                       if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+                          SnackBar(
+                            content: Text('Error: $e'),
+                            backgroundColor: Colors.red,
+                          ),
                         );
                       }
                     }
@@ -380,15 +452,23 @@ class _RegionSelectorPageState extends State<RegionSelectorPage>
                 ),
                 const SizedBox(width: 12),
                 Text(
-                  widget.controller.formatDuration(widget.controller.recordDuration),
+                  widget.controller.formatDuration(
+                    widget.controller.recordDuration,
+                  ),
                   style: TextStyle(
-                    color: widget.controller.isRecording ? Colors.red : Colors.white,
+                    color: widget.controller.isRecording
+                        ? Colors.red
+                        : Colors.white,
                     fontWeight: FontWeight.bold,
                     fontFamily: 'Consolas',
                   ),
                 ),
                 const SizedBox(width: 12),
-                VerticalDivider(color: Colors.grey.shade700, indent: 10, endIndent: 10),
+                VerticalDivider(
+                  color: Colors.grey.shade700,
+                  indent: 10,
+                  endIndent: 10,
+                ),
                 IconButton(
                   icon: Icon(
                     _isLocked ? Icons.lock : Icons.lock_open,
@@ -403,7 +483,11 @@ class _RegionSelectorPageState extends State<RegionSelectorPage>
                   },
                 ),
                 IconButton(
-                  icon: const Icon(Icons.dashboard, color: Colors.white70, size: 18),
+                  icon: const Icon(
+                    Icons.dashboard,
+                    color: Colors.white70,
+                    size: 18,
+                  ),
                   onPressed: widget.onCancel,
                 ),
               ],

@@ -66,16 +66,15 @@ class RecorderController extends ChangeNotifier {
     if (_isRecording) {
       _isRecording = false;
       _stopTimer();
+      _recordDuration = 0; // Reset immediately
       notifyListeners();
       try {
         final path = await recorder.stopRecording();
         _lastSavedFile = path;
-        _recordDuration = 0; // Reset to zero
         AppLogger.info('Recording stopped. File saved at: $path');
         onRecordingSaved();
         notifyListeners();
       } catch (e, stackTrace) {
-        _recordDuration = 0; // Reset even on error
         AppLogger.error('Failed to stop recording', e, stackTrace);
         rethrow;
       }

@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:desktop_drop/desktop_drop.dart';
 import 'package:file_picker/file_picker.dart';
@@ -31,21 +33,15 @@ class ConverterPage extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Input File',
-                    style: AppStyles.h2,
-                  ),
-                  const SizedBox(height: 12),
+                  const Text('Input Source', style: AppStyles.h2),
+                  const SizedBox(height: 16),
                   _buildInputFileSection(context),
                   const SizedBox(height: 32),
-                  const Text(
-                    'Conversion Settings',
-                    style: AppStyles.h2,
-                  ),
-                  const SizedBox(height: 12),
-                  _buildSettingsSection(),
+                  const Text('Output Configuration', style: AppStyles.h2),
+                  const SizedBox(height: 16),
+                  _buildSettingsSection(context),
                   const Spacer(),
-                  _buildConvertButton(context),
+                  if (controller.isConverting) _buildProcessingIndicator(),
                   const Spacer(),
                 ],
               ),
@@ -57,165 +53,288 @@ class ConverterPage extends StatelessWidget {
   }
 
   Widget _buildInputFileSection(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: AppColors.background,
-              borderRadius: BorderRadius.circular(4),
-              border: Border.all(color: Colors.white12),
-            ),
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.sidebar.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+      ),
+      padding: const EdgeInsets.all(12),
+      child: Row(
+        children: [
+          Icon(Icons.movie_outlined, color: AppColors.textSecondary, size: 20),
+          const SizedBox(width: 12),
+          Expanded(
             child: Text(
-              controller.inputFile ?? 'No file selected',
+              controller.inputFile ?? 'Drag and drop a video here or browse',
               style: TextStyle(
                 color: controller.inputFile == null
                     ? AppColors.textSecondary
                     : AppColors.textPrimary,
+                fontSize: 13,
               ),
+              overflow: TextOverflow.ellipsis,
             ),
           ),
-        ),
-        const SizedBox(width: 12),
-        ElevatedButton.icon(
-          onPressed: controller.isConverting
-              ? null
-              : () async {
-                  FilePickerResult? result = await FilePicker.pickFiles(
-                    type: FileType.video,
-                  );
-                  if (result != null) {
-                    controller.inputFile = result.files.single.path;
-                  }
-                },
-          icon: const Icon(Icons.file_upload, size: 18),
-          label: const Text('Browse'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF333333),
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(4),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSettingsSection() {
-    final formats = ['mkv', 'mp4', 'avi', 'gif'];
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: AppColors.sidebar,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        children: [
-          const Text('Target Format:', style: AppStyles.caption),
-          const SizedBox(width: 16),
-          DropdownButton<String>(
-            value: controller.targetFormat,
-            dropdownColor: AppColors.surface,
-            items: formats
-                .map((f) => DropdownMenuItem(value: f, child: Text(f.toUpperCase())))
-                .toList(),
-            onChanged: controller.isConverting
+          const SizedBox(width: 12),
+          IconButton(
+            onPressed: controller.isConverting
                 ? null
-                : (v) {
-                    controller.targetFormat = v!;
-                    if (v == 'gif') controller.compress = false;
+                : () async {
+                    FilePickerResult? result = await FilePicker.pickFiles(
+                      type: FileType.video,
+                    );
+                    if (result != null) {
+                      controller.inputFile = result.files.single.path;
+                    }
                   },
-          ),
-          const SizedBox(width: 48),
-          const Text('Compress (H.264):', style: AppStyles.caption),
-          const SizedBox(width: 8),
-          Switch(
-            value: controller.compress,
-            activeThumbColor: AppColors.primary,
-            onChanged: controller.isConverting || controller.targetFormat == 'gif'
-                ? null
-                : (v) => controller.compress = v,
-          ),
-          const SizedBox(width: 48),
-          const Text('Same Directory:', style: AppStyles.caption),
-          const SizedBox(width: 8),
-          Switch(
-            value: controller.exportToSameDir,
-            activeThumbColor: AppColors.primary,
-            onChanged: controller.isConverting ? null : (v) => controller.exportToSameDir = v,
+            icon: const Icon(Icons.folder_open_outlined, size: 20),
+            tooltip: 'Browse Files',
+            style: IconButton.styleFrom(
+              foregroundColor: AppColors.textSecondary,
+              hoverColor: Colors.white10,
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildConvertButton(BuildContext context) {
-    return Center(
-      child: controller.isConverting
-          ? Column(
-              mainAxisSize: MainAxisSize.min,
-              children: const [
-                CircularProgressIndicator(color: AppColors.primary),
-                SizedBox(height: 16),
-                Text(
-                  'CONVERTING...',
-                  style: TextStyle(
-                    color: AppColors.primary,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 2.0,
+  Widget _buildSettingsSection(BuildContext context) {
+    final formats = ['mkv', 'mp4', 'avi', 'gif'];
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: AppColors.sidebar,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+      ),
+      child: Row(
+        children: [
+          _buildMinimalDropdown('Format', controller.targetFormat, formats, (
+            v,
+          ) {
+            controller.targetFormat = v!;
+            if (v == 'gif') controller.compress = false;
+          }),
+          const SizedBox(width: 40),
+          _buildMinimalToggle(
+            'Reduce Size',
+            controller.compress,
+            (controller.isConverting || controller.targetFormat == 'gif')
+                ? null
+                : (v) => controller.compress = v,
+          ),
+          const SizedBox(width: 40),
+          _buildMinimalToggle(
+            'Save in same directory',
+            controller.exportToSameDir,
+            (v) => controller.exportToSameDir = v,
+            infoText:
+                'If unselected, files will be stored in your default klippvideos folder.',
+          ),
+          const Spacer(),
+          _buildMinimalConvertTrigger(context),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMinimalDropdown(
+    String label,
+    String value,
+    List<String> items,
+    Function(String?) onChanged,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: AppStyles.caption),
+        DropdownButton<String>(
+          value: value,
+          dropdownColor: AppColors.surface,
+          underline: const SizedBox(),
+          icon: const Icon(Icons.keyboard_arrow_down, size: 16),
+          items: items
+              .map(
+                (f) => DropdownMenuItem(
+                  value: f,
+                  child: Text(
+                    f.toUpperCase(),
+                    style: const TextStyle(fontSize: 13),
                   ),
                 ),
-              ],
-            )
-          : ElevatedButton.icon(
-              onPressed: controller.inputFile == null
-                  ? null
-                  : () async {
-                      try {
-                        await controller.convert();
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Conversion completed successfully!'),
-                              backgroundColor: AppColors.success,
-                            ),
-                          );
-                        }
-                      } catch (e) {
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('Conversion Error: $e'),
-                              backgroundColor: AppColors.primary,
-                            ),
-                          );
-                        }
-                      }
-                    },
-              icon: const Icon(Icons.transform, size: 24),
-              label: const Text(
-                'START CONVERSION',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 1.5,
-                ),
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
-                disabledBackgroundColor: const Color(0xFF333333),
-                disabledForegroundColor: Colors.grey,
-                padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 20),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(30),
-                ),
+              )
+              .toList(),
+          onChanged: controller.isConverting ? null : onChanged,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMinimalToggle(
+    String label,
+    bool value,
+    Function(bool)? onChanged, {
+    String? infoText,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              label,
+              style: AppStyles.caption.copyWith(
+                color: onChanged == null
+                    ? Colors.white24
+                    : AppColors.textSecondary,
               ),
             ),
+            if (infoText != null) ...[
+              const SizedBox(width: 4),
+              Tooltip(
+                message: infoText,
+                child: Icon(
+                  Icons.info_outline,
+                  size: 12,
+                  color: onChanged == null ? Colors.white10 : Colors.white38,
+                ),
+              ),
+            ],
+          ],
+        ),
+        const SizedBox(height: 12),
+        _SquareToggle(value: value, onChanged: onChanged),
+      ],
+    );
+  }
+
+  Widget _buildMinimalConvertTrigger(BuildContext context) {
+    return Column(
+      children: [
+        Text('Run', style: AppStyles.caption),
+        const SizedBox(height: 4),
+        IconButton(
+          onPressed: controller.inputFile == null || controller.isConverting
+              ? null
+              : () async {
+                  try {
+                    await controller.convert();
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: const Text('Task completed successfully'),
+                          backgroundColor: AppColors.success,
+                          behavior: SnackBarBehavior.floating,
+                          width: 320,
+                          action: SnackBarAction(
+                            label: 'VIEW',
+                            textColor: Colors.white,
+                            onPressed: () {
+                              if (controller.lastOutputFile != null) {
+                                Process.run('explorer.exe', [
+                                  '/select,',
+                                  controller.lastOutputFile!,
+                                ]);
+                              }
+                            },
+                          ),
+                        ),
+                      );
+                    }
+                  } catch (e) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Error: $e'),
+                          backgroundColor: AppColors.primary,
+                        ),
+                      );
+                    }
+                  }
+                },
+          icon: Icon(
+            Icons.play_circle_filled_outlined,
+            color: controller.inputFile == null
+                ? Colors.white24
+                : AppColors.primary,
+            size: 32,
+          ),
+          tooltip: 'Start Conversion',
+        ),
+      ],
+    );
+  }
+
+  Widget _buildProcessingIndicator() {
+    return Center(
+      child: Column(
+        children: const [
+          SizedBox(
+            width: 150,
+            child: LinearProgressIndicator(
+              backgroundColor: Colors.white10,
+              color: AppColors.primary,
+              minHeight: 2,
+            ),
+          ),
+          SizedBox(height: 12),
+          Text(
+            'PROCESSING VIDEO...',
+            style: TextStyle(
+              color: AppColors.primary,
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 1.5,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SquareToggle extends StatelessWidget {
+  final bool value;
+  final ValueChanged<bool>? onChanged;
+
+  const _SquareToggle({required this.value, this.onChanged});
+
+  @override
+  Widget build(BuildContext context) {
+    final bool isEnabled = onChanged != null;
+
+    return GestureDetector(
+      onTap: isEnabled ? () => onChanged?.call(!value) : null,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        width: 36,
+        height: 20,
+        padding: const EdgeInsets.all(2),
+        decoration: BoxDecoration(
+          color: isEnabled
+              ? (value ? AppColors.primary : Colors.white10)
+              : Colors.white.withValues(alpha: 0.05),
+          borderRadius: BorderRadius.circular(2),
+        ),
+        child: Opacity(
+          opacity: isEnabled ? 1.0 : 0.4,
+          child: AnimatedAlign(
+            duration: const Duration(milliseconds: 200),
+            alignment: value ? Alignment.centerRight : Alignment.centerLeft,
+            child: Container(
+              width: 14,
+              height: 14,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(1),
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

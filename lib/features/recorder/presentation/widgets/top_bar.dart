@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import '../../../../core/styles/app_styles.dart';
 import '../controllers/recorder_controller.dart';
@@ -27,14 +29,18 @@ class TopBar extends StatelessWidget {
               const SizedBox(width: 12),
               Text(
                 _getTitle(),
-                style: const TextStyle(color: AppColors.textSecondary, fontSize: 14),
+                style: const TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 14,
+                ),
               ),
               if (selectedIndex == 0) ...[
                 const SizedBox(width: 8),
                 _buildModeSelector(),
               ],
               const Spacer(),
-              if (selectedIndex == 0 && recorderController.recordingRegion != null) ...[
+              if (selectedIndex == 0 &&
+                  recorderController.recordingRegion != null) ...[
                 Text(
                   '${recorderController.recordingRegion!.width.toInt()}x${recorderController.recordingRegion!.height.toInt()} - (${recorderController.recordingRegion!.left.toInt()}, ${recorderController.recordingRegion!.top.toInt()})',
                   style: const TextStyle(
@@ -122,10 +128,22 @@ class TopBar extends StatelessWidget {
               ),
             ),
           ),
-          const PopupMenuItem(value: 'size:320x240', child: Text('320x240 (4:3)')),
-          const PopupMenuItem(value: 'size:640x360', child: Text('640x360 (16:9)')),
-          const PopupMenuItem(value: 'size:1280x720', child: Text('1280x720 (16:9)')),
-          const PopupMenuItem(value: 'size:1920x1080', child: Text('1920x1080 (16:9)')),
+          const PopupMenuItem(
+            value: 'size:320x240',
+            child: Text('320x240 (4:3)'),
+          ),
+          const PopupMenuItem(
+            value: 'size:640x360',
+            child: Text('640x360 (16:9)'),
+          ),
+          const PopupMenuItem(
+            value: 'size:1280x720',
+            child: Text('1280x720 (16:9)'),
+          ),
+          const PopupMenuItem(
+            value: 'size:1920x1080',
+            child: Text('1920x1080 (16:9)'),
+          ),
           const PopupMenuDivider(),
           const PopupMenuItem(
             value: 'fullscreen',
@@ -154,7 +172,9 @@ class TopBar extends StatelessWidget {
         dropdownColor: AppColors.surface,
         style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
         items: formats
-            .map((f) => DropdownMenuItem(value: f, child: Text(f.toUpperCase())))
+            .map(
+              (f) => DropdownMenuItem(value: f, child: Text(f.toUpperCase())),
+            )
             .toList(),
         onChanged: recorderController.isRecording
             ? null
@@ -167,7 +187,9 @@ class TopBar extends StatelessWidget {
     return Text(
       recorderController.formatDuration(recorderController.recordDuration),
       style: TextStyle(
-        color: recorderController.isRecording ? AppColors.primary : AppColors.textSecondary,
+        color: recorderController.isRecording
+            ? AppColors.primary
+            : AppColors.textSecondary,
         fontWeight: FontWeight.bold,
         fontFamily: 'Consolas',
       ),
@@ -185,14 +207,28 @@ class TopBar extends StatelessWidget {
           try {
             final wasRecording = recorderController.isRecording;
             await recorderController.toggleRecording();
-            
+
             if (wasRecording && recorderController.lastSavedFile != null) {
               if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text('Recording saved: ${recorderController.lastSavedFile!.split('\\').last}'),
+                    content: Text(
+                      'Recording saved: ${recorderController.lastSavedFile!.split('\\').last}',
+                    ),
                     backgroundColor: Colors.green,
                     behavior: SnackBarBehavior.floating,
+                    action: SnackBarAction(
+                      label: 'VIEW',
+                      textColor: Colors.white,
+                      onPressed: () {
+                        if (recorderController.lastSavedFile != null) {
+                          Process.run('explorer.exe', [
+                            '/select,',
+                            recorderController.lastSavedFile!,
+                          ]);
+                        }
+                      },
+                    ),
                   ),
                 );
               }
@@ -209,10 +245,14 @@ class TopBar extends StatelessWidget {
           }
         },
         icon: Icon(
-          recorderController.isRecording ? Icons.stop : Icons.fiber_manual_record,
+          recorderController.isRecording
+              ? Icons.stop
+              : Icons.fiber_manual_record,
           color: AppColors.primary,
         ),
-        tooltip: recorderController.isRecording ? 'Stop Recording' : 'Start Recording',
+        tooltip: recorderController.isRecording
+            ? 'Stop Recording'
+            : 'Start Recording',
       ),
     );
   }
