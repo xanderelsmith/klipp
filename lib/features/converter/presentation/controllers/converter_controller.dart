@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:desktop_screen_recorder/desktop_screen_recorder.dart';
 import 'package:path/path.dart' as p;
+import '../../../../core/utils/logger.dart';
 
 class ConverterController extends ChangeNotifier {
   final DesktopScreenRecorder recorder;
@@ -30,11 +31,13 @@ class ConverterController extends ChangeNotifier {
 
   set inputFile(String? file) {
     _inputFile = file;
+    AppLogger.info('Input file selected for conversion: $file');
     notifyListeners();
   }
 
   set targetFormat(String format) {
     _targetFormat = format;
+    AppLogger.info('Target format changed to: $format');
     notifyListeners();
   }
 
@@ -62,7 +65,7 @@ class ConverterController extends ChangeNotifier {
     try {
       final baseName = p.basenameWithoutExtension(_inputFile!);
       String outputDirPath;
-      
+
       if (_exportToSameDir) {
         outputDirPath = p.dirname(_inputFile!);
       } else {
@@ -78,14 +81,20 @@ class ConverterController extends ChangeNotifier {
         '${baseName}_converted_${DateTime.now().millisecondsSinceEpoch}.$_targetFormat',
       );
 
+      AppLogger.info(
+        'Starting conversion: Input=$_inputFile, Output=$outPath, Compress=$_compress',
+      );
+
       await recorder.convertVideo(
         inputPath: _inputFile!,
         outputPath: outPath,
         compress: _compress,
       );
 
+      AppLogger.info('Conversion completed successfully');
       onConversionCompleted();
-    } catch (e) {
+    } catch (e, stackTrace) {
+      AppLogger.error('Conversion failed', e, stackTrace);
       rethrow;
     } finally {
       _isConverting = false;

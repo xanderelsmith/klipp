@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import '../../../../core/utils/logger.dart';
 
 class SettingsController extends ChangeNotifier {
   String _ffmpegStatus = 'Checking...';
@@ -15,19 +16,22 @@ class SettingsController extends ChangeNotifier {
     notifyListeners();
 
     try {
+      AppLogger.info('Checking FFmpeg availability...');
       final result = await Process.run('ffmpeg', ['-version']);
       if (result.exitCode == 0) {
         _isFfmpegAvailable = true;
         _ffmpegStatus = 'Available';
-        // Extract version from first line (e.g., ffmpeg version 4.4.1...)
         _ffmpegVersion = result.stdout.toString().split('\n').first;
+        AppLogger.info('FFmpeg found: $_ffmpegVersion');
       } else {
         _isFfmpegAvailable = false;
         _ffmpegStatus = 'Not found or error';
+        AppLogger.warning('FFmpeg found but returned exit code ${result.exitCode}');
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
       _isFfmpegAvailable = false;
       _ffmpegStatus = 'Not found in system PATH';
+      AppLogger.error('FFmpeg not found in system PATH', e, stackTrace);
     }
     notifyListeners();
   }

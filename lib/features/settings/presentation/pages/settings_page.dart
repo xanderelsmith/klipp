@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:klipp/features/settings/presentation/controllers/settings_controller.dart';
+import '../../../../core/styles/app_styles.dart';
+import '../controllers/settings_controller.dart';
 
 class SettingsPage extends StatelessWidget {
   final SettingsController controller;
@@ -13,26 +14,26 @@ class SettingsPage extends StatelessWidget {
       listenable: controller,
       builder: (context, _) {
         return Padding(
-          padding: const EdgeInsets.all(32.0),
+          padding: AppStyles.pagePadding,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
                 'System Requirements',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                style: AppStyles.h1,
               ),
               const SizedBox(height: 24),
               _buildFfmpegSection(context),
               const SizedBox(height: 32),
               const Text(
                 'About Klipp',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                style: AppStyles.h2,
               ),
               const SizedBox(height: 12),
               const Text(
                 'Klipp uses FFmpeg for high-performance screen recording and video conversion. '
                 'Ensure FFmpeg is installed and added to your system PATH for all features to work correctly.',
-                style: TextStyle(color: Colors.grey, height: 1.5),
+                style: TextStyle(color: AppColors.textSecondary, height: 1.5),
               ),
             ],
           ),
@@ -47,12 +48,10 @@ class SettingsPage extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: const Color(0xFF252525),
+        color: AppColors.sidebar,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: available
-              ? Colors.green.withValues(alpha: 0.2)
-              : Colors.red.withValues(alpha: 0.2),
+          color: available ? AppColors.success.withValues(alpha: 0.2) : AppColors.primary.withValues(alpha: 0.2),
         ),
       ),
       child: Column(
@@ -62,13 +61,13 @@ class SettingsPage extends StatelessWidget {
             children: [
               Icon(
                 available ? Icons.check_circle : Icons.error,
-                color: available ? Colors.green : Colors.red,
+                color: available ? AppColors.success : AppColors.primary,
                 size: 28,
               ),
               const SizedBox(width: 16),
               const Text(
                 'FFmpeg Dependency',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                style: AppStyles.h2,
               ),
               const Spacer(),
               ElevatedButton.icon(
@@ -91,7 +90,7 @@ class SettingsPage extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.red.withValues(alpha: 0.05),
+                color: AppColors.primary.withValues(alpha: 0.05),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Column(
@@ -99,34 +98,21 @@ class SettingsPage extends StatelessWidget {
                 children: [
                   const Text(
                     'How to install FFmpeg:',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.redAccent,
-                    ),
+                    style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.accent),
                   ),
                   const SizedBox(height: 8),
                   const Text(
                     '1. Download from ffmpeg.org\n'
                     '2. Extract to a folder (e.g., C:\\ffmpeg)\n'
                     '3. Add the bin folder to your System PATH environment variable.',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: Colors.grey,
-                      height: 1.4,
-                    ),
+                    style: TextStyle(fontSize: 13, color: AppColors.textSecondary, height: 1.4),
                   ),
                   const SizedBox(height: 12),
                   TextButton.icon(
                     onPressed: () {
-                      Clipboard.setData(
-                        const ClipboardData(
-                          text: 'https://ffmpeg.org/download.html',
-                        ),
-                      );
+                      Clipboard.setData(const ClipboardData(text: 'https://ffmpeg.org/download.html'));
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Link copied to clipboard'),
-                        ),
+                        const SnackBar(content: Text('Link copied to clipboard')),
                       );
                     },
                     icon: const Icon(Icons.copy, size: 16),
@@ -151,10 +137,7 @@ class SettingsPage extends StatelessWidget {
             width: 80,
             child: Text(
               '$label:',
-              style: const TextStyle(
-                color: Colors.grey,
-                fontWeight: FontWeight.w500,
-              ),
+              style: const TextStyle(color: AppColors.textSecondary, fontWeight: FontWeight.w500),
             ),
           ),
           Expanded(

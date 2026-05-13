@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:desktop_drop/desktop_drop.dart';
 import 'package:file_picker/file_picker.dart';
-import 'converter_controller.dart';
+import '../../../../core/styles/app_styles.dart';
+import '../controllers/converter_controller.dart';
 
 class ConverterPage extends StatelessWidget {
   final ConverterController controller;
@@ -23,23 +24,23 @@ class ConverterPage extends StatelessWidget {
         builder: (context, _) {
           return Container(
             color: controller.isDragging
-                ? Colors.red.withOpacity(0.05)
+                ? AppColors.primary.withValues(alpha: 0.05)
                 : Colors.transparent,
             child: Padding(
-              padding: const EdgeInsets.all(32.0),
+              padding: AppStyles.pagePadding,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
                     'Input File',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    style: AppStyles.h2,
                   ),
                   const SizedBox(height: 12),
                   _buildInputFileSection(context),
                   const SizedBox(height: 32),
                   const Text(
                     'Conversion Settings',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    style: AppStyles.h2,
                   ),
                   const SizedBox(height: 12),
                   _buildSettingsSection(),
@@ -62,7 +63,7 @@ class ConverterPage extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: const Color(0xFF1A1A1A),
+              color: AppColors.background,
               borderRadius: BorderRadius.circular(4),
               border: Border.all(color: Colors.white12),
             ),
@@ -70,8 +71,8 @@ class ConverterPage extends StatelessWidget {
               controller.inputFile ?? 'No file selected',
               style: TextStyle(
                 color: controller.inputFile == null
-                    ? Colors.grey.shade600
-                    : Colors.white,
+                    ? AppColors.textSecondary
+                    : AppColors.textPrimary,
               ),
             ),
           ),
@@ -108,16 +109,16 @@ class ConverterPage extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: const Color(0xFF252525),
+        color: AppColors.sidebar,
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
         children: [
-          const Text('Target Format:', style: TextStyle(color: Colors.grey)),
+          const Text('Target Format:', style: AppStyles.caption),
           const SizedBox(width: 16),
           DropdownButton<String>(
             value: controller.targetFormat,
-            dropdownColor: const Color(0xFF2D2D2D),
+            dropdownColor: AppColors.surface,
             items: formats
                 .map((f) => DropdownMenuItem(value: f, child: Text(f.toUpperCase())))
                 .toList(),
@@ -129,21 +130,21 @@ class ConverterPage extends StatelessWidget {
                   },
           ),
           const SizedBox(width: 48),
-          const Text('Compress (H.264):', style: TextStyle(color: Colors.grey)),
+          const Text('Compress (H.264):', style: AppStyles.caption),
           const SizedBox(width: 8),
           Switch(
             value: controller.compress,
-            activeThumbColor: Colors.red,
+            activeThumbColor: AppColors.primary,
             onChanged: controller.isConverting || controller.targetFormat == 'gif'
                 ? null
                 : (v) => controller.compress = v,
           ),
           const SizedBox(width: 48),
-          const Text('Same Directory:', style: TextStyle(color: Colors.grey)),
+          const Text('Same Directory:', style: AppStyles.caption),
           const SizedBox(width: 8),
           Switch(
             value: controller.exportToSameDir,
-            activeThumbColor: Colors.red,
+            activeThumbColor: AppColors.primary,
             onChanged: controller.isConverting ? null : (v) => controller.exportToSameDir = v,
           ),
         ],
@@ -157,12 +158,12 @@ class ConverterPage extends StatelessWidget {
           ? Column(
               mainAxisSize: MainAxisSize.min,
               children: const [
-                CircularProgressIndicator(color: Colors.red),
+                CircularProgressIndicator(color: AppColors.primary),
                 SizedBox(height: 16),
                 Text(
                   'CONVERTING...',
                   style: TextStyle(
-                    color: Colors.red,
+                    color: AppColors.primary,
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                     letterSpacing: 2.0,
@@ -180,7 +181,7 @@ class ConverterPage extends StatelessWidget {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
                               content: Text('Conversion completed successfully!'),
-                              backgroundColor: Colors.green,
+                              backgroundColor: AppColors.success,
                             ),
                           );
                         }
@@ -189,7 +190,7 @@ class ConverterPage extends StatelessWidget {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: Text('Conversion Error: $e'),
-                              backgroundColor: Colors.red,
+                              backgroundColor: AppColors.primary,
                             ),
                           );
                         }
@@ -205,7 +206,7 @@ class ConverterPage extends StatelessWidget {
                 ),
               ),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
+                backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,
                 disabledBackgroundColor: const Color(0xFF333333),
                 disabledForegroundColor: Colors.grey,

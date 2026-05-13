@@ -2,7 +2,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:path/path.dart' as p;
-import 'gallery_controller.dart';
+import '../../../../core/styles/app_styles.dart';
+import '../controllers/gallery_controller.dart';
 
 class GalleryPage extends StatelessWidget {
   final GalleryController controller;
@@ -23,7 +24,7 @@ class GalleryPage extends StatelessWidget {
           return const Center(
             child: Text(
               'No videos found in your klippvideos folder.',
-              style: TextStyle(color: Colors.grey),
+              style: AppStyles.caption,
             ),
           );
         }
@@ -38,12 +39,12 @@ class GalleryPage extends StatelessWidget {
             final sizeMb = (stat.size / (1024 * 1024)).toStringAsFixed(2);
 
             return _VideoTile(
+              controller: controller,
               file: file,
               fileName: fileName,
               stat: stat,
               sizeMb: sizeMb,
               onRename: (newName) => controller.renameFile(file, newName),
-              onDelete: () => controller.deleteFile(file),
               onOpenFolder: () => onOpenFolder(file.path),
             );
           },
@@ -54,21 +55,21 @@ class GalleryPage extends StatelessWidget {
 }
 
 class _VideoTile extends StatelessWidget {
+  final GalleryController controller;
   final FileSystemEntity file;
   final String fileName;
   final FileStat stat;
   final String sizeMb;
   final Function(String) onRename;
-  final VoidCallback onDelete;
   final VoidCallback onOpenFolder;
 
   const _VideoTile({
+    required this.controller,
     required this.file,
     required this.fileName,
     required this.stat,
     required this.sizeMb,
     required this.onRename,
-    required this.onDelete,
     required this.onOpenFolder,
   });
 
@@ -84,25 +85,37 @@ class _VideoTile extends StatelessWidget {
         return KeyEventResult.ignored;
       },
       child: Card(
-        color: const Color(0xFF252525),
+        color: AppColors.sidebar,
         margin: const EdgeInsets.only(bottom: 8),
         child: ListTile(
-          leading: const Icon(Icons.movie, color: Colors.redAccent, size: 36),
+          leading: const Icon(Icons.movie, color: AppColors.accent, size: 36),
           title: Text(
             fileName,
             style: const TextStyle(fontWeight: FontWeight.bold),
           ),
           subtitle: Text(
             '${stat.modified.toString().split('.')[0]} • $sizeMb MB',
+            style: AppStyles.caption,
           ),
           trailing: PopupMenuButton<String>(
-            icon: const Icon(Icons.more_vert, color: Colors.grey),
+            icon: const Icon(Icons.more_vert, color: AppColors.textSecondary),
             tooltip: 'Menu',
             onSelected: (value) async {
               if (value == 'rename') {
                 _showRenameDialog(context);
               } else if (value == 'delete') {
-                onDelete();
+                try {
+                  await controller.deleteFile(file);
+                } catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(e.toString()),
+                        backgroundColor: AppColors.primary,
+                      ),
+                    );
+                  }
+                }
               } else if (value == 'open') {
                 onOpenFolder();
               }
@@ -128,8 +141,8 @@ class _VideoTile extends StatelessWidget {
                 value: 'delete',
                 child: ListTile(
                   dense: true,
-                  leading: Icon(Icons.delete, color: Colors.red, size: 20),
-                  title: Text('Delete', style: TextStyle(color: Colors.red)),
+                  leading: Icon(Icons.delete, color: AppColors.primary, size: 20),
+                  title: Text('Delete', style: TextStyle(color: AppColors.primary)),
                 ),
               ),
             ],
