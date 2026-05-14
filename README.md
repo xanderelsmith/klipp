@@ -1,5 +1,6 @@
 # Klipp Screen Recorder 🎬
 
+![Klipp](klipp-1.png)
 > A professional, high-performance screen recording and video conversion tool built with **Flutter** and **FFmpeg**. 
 
 Klipp is designed for power users who need a non-intrusive recording experience. It features a Bandicam-inspired "Ghost Frame" interaction model that lets you work while you record.

@@ -102,7 +102,10 @@ class TopBar extends StatelessWidget {
             final w = double.parse(parts[0]);
             final h = double.parse(parts[1]);
             recorderController.recordingMode = 'Rectangle';
-            recorderController.recordingRegion = Rect.fromLTWH(0, 0, w, h);
+            
+            // Start selection mode with the predefined size (centered roughly)
+            // Use 100, 100 as a safe starting point that isn't under the taskbar/topbar
+            recorderController.startRegionSelection(Rect.fromLTWH(200, 100, w, h));
           } else if (value == 'select_area') {
             recorderController.startRegionSelection();
           }

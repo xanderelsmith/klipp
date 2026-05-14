@@ -8,9 +8,12 @@ class RecorderController extends ChangeNotifier {
   final DesktopScreenRecorder recorder;
   final String outputDir;
   final VoidCallback onRecordingSaved;
-  final VoidCallback onSelectRegion;
+  final Function(Rect?) onSelectRegion;
 
   bool _isRecording = false;
+  bool _includeAudio = true;
+  String? _selectedAudioDevice;
+  List<String> _availableAudioDevices = [];
   int _recordDuration = 0;
   Timer? _timer;
   String? _lastSavedFile;
@@ -26,6 +29,9 @@ class RecorderController extends ChangeNotifier {
   });
 
   bool get isRecording => _isRecording;
+  bool get includeAudio => _includeAudio;
+  String? get selectedAudioDevice => _selectedAudioDevice;
+  List<String> get availableAudioDevices => _availableAudioDevices;
   int get recordDuration => _recordDuration;
   String? get lastSavedFile => _lastSavedFile;
   String get selectedFormat => _selectedFormat;
@@ -85,21 +91,31 @@ class RecorderController extends ChangeNotifier {
       _startTimer();
       notifyListeners();
       try {
-        AppLogger.info('Starting recording: Mode=$recordingMode, Format=$selectedFormat');
+        AppLogger.info(
+          'Starting recording: Mode=$recordingMode, Format=$selectedFormat',
+        );
 
         // Scale logical pixels to physical pixels for FFmpeg
         final dpr = PlatformDispatcher.instance.views.first.devicePixelRatio;
-        
+
         int? x, y, width, height;
         if (_recordingRegion != null) {
           x = (_recordingRegion!.left * dpr).round();
           y = (_recordingRegion!.top * dpr).round();
           width = (_recordingRegion!.width * dpr).round();
           height = (_recordingRegion!.height * dpr).round();
-          
+
           // FFmpeg sometimes requires even dimensions
           if (width % 2 != 0) width++;
           if (height % 2 != 0) height++;
+        }
+
+        // Fetch audio devices if needed
+        if (_includeAudio && _availableAudioDevices.isEmpty) {
+          _availableAudioDevices = await recorder.listAudioDevices();
+          if (_availableAudioDevices.isNotEmpty) {
+            _selectedAudioDevice = _availableAudioDevices.first;
+          }
         }
 
         await recorder.startRecording(
@@ -108,6 +124,8 @@ class RecorderController extends ChangeNotifier {
           y: y,
           width: width,
           height: height,
+          includeAudio: _includeAudio,
+          audioDevice: _selectedAudioDevice,
         );
       } catch (e, stackTrace) {
         _isRecording = false;
@@ -119,9 +137,11 @@ class RecorderController extends ChangeNotifier {
     }
   }
 
-  void startRegionSelection() {
-    AppLogger.info('Entering region selection mode');
-    onSelectRegion();
+  void startRegionSelection([Rect? initialRect]) {
+    AppLogger.info(
+      'Entering region selection mode with initial rect: $initialRect',
+    );
+    onSelectRegion(initialRect);
   }
 
   String formatDuration(int seconds) {

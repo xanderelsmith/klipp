@@ -5,6 +5,7 @@
 list(APPEND FLUTTER_PLUGIN_LIST
   desktop_drop
   desktop_screen_recorder
+  record_linux
   screen_retriever_linux
   window_manager
 )

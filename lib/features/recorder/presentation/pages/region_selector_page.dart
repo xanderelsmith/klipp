@@ -1,5 +1,4 @@
 import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:window_manager/window_manager.dart';
@@ -7,6 +6,7 @@ import 'package:screen_retriever/screen_retriever.dart';
 import 'dart:async';
 
 import '../controllers/recorder_controller.dart';
+import '../widgets/audio_meter.dart';
 
 enum _ResizeMode {
   none,
@@ -26,6 +26,7 @@ class RegionSelectorPage extends StatefulWidget {
   final VoidCallback onCancel;
   final RecorderController controller;
   final Function(bool) onIgnoreMouseEvents;
+  final Rect? initialRect;
 
   const RegionSelectorPage({
     super.key,
@@ -33,6 +34,7 @@ class RegionSelectorPage extends StatefulWidget {
     required this.onCancel,
     required this.controller,
     required this.onIgnoreMouseEvents,
+    this.initialRect,
   });
 
   @override
@@ -41,29 +43,54 @@ class RegionSelectorPage extends StatefulWidget {
 
 class _RegionSelectorPageState extends State<RegionSelectorPage>
     with WindowListener {
+  // ── Shared state ──────────────────────────────────────────────────────────
   late Rect _selectionRect;
   bool _isLocked = false;
   _ResizeMode _activeResizeMode = _ResizeMode.none;
 
   Timer? _mouseTracker;
   final double _handleSize = 10.0;
-  final double _toolbarHeight = 40.0;
+  final double _toolbarHeight = 44.0;
   final double _dragBarHeight = 30.0;
 
+  // ── Draw-mode state (only when initialRect == null) ───────────────────────
+  bool _isDrawMode = false;
+  Offset? _drawStart;
+  Offset? _drawCurrent;
+
+  bool _isIgnoringMouseEvents = false;
+
+  // ── Lifecycle ─────────────────────────────────────────────────────────────
   @override
   void initState() {
     super.initState();
     windowManager.addListener(this);
 
-    // Default 800x600 centered rectangle
-    _selectionRect = const Rect.fromLTWH(240, 60, 800, 600);
-
-    _startMouseTracking();
+    if (widget.initialRect == null) {
+      // Free-draw mode: no initial rect, user draws it
+      _isDrawMode = true;
+      _selectionRect = Rect.zero; // placeholder; not rendered in draw mode
+      // Do NOT start mouse tracking yet — we need full mouse capture for drawing
+    } else {
+      // Predefined size or previously-set region: go straight to adjust mode
+      _selectionRect = widget.initialRect!;
+      _startMouseTracking();
+    }
   }
 
-  bool _isIgnoringMouseEvents = false;
+  @override
+  void dispose() {
+    _mouseTracker?.cancel();
+    windowManager.removeListener(this);
+    super.dispose();
+  }
 
+  @override
+  void onWindowFocus() {}
+
+  // ── Mouse-passthrough tracking (adjust mode only) ─────────────────────────
   void _startMouseTracking() {
+    _mouseTracker?.cancel();
     _mouseTracker = Timer.periodic(const Duration(milliseconds: 50), (
       timer,
     ) async {
@@ -71,19 +98,13 @@ class _RegionSelectorPageState extends State<RegionSelectorPage>
 
       final mousePos = await screenRetriever.getCursorScreenPoint();
 
-      // Calculate active zones
-      // Zones are: Drag bar, Toolbar, Resize handles
-
-      // 1. The Border Zone (edges)
       final outerRect = _selectionRect.inflate(_handleSize);
       final innerRect = _selectionRect.deflate(_handleSize);
-      bool isOverBorder = outerRect.contains(mousePos) && !innerRect.contains(mousePos);
+      bool isOverBorder =
+          outerRect.contains(mousePos) && !innerRect.contains(mousePos);
 
-      // 2. Explicit Handle Zones (for the circular icons)
-      // We check the 4 corners and 4 midpoints specifically
       bool isOverHandle = false;
-      final handleRadius = _handleSize; 
-      
+      final handleRadius = _handleSize * 2;
       final handleCenters = [
         _selectionRect.topLeft,
         _selectionRect.topCenter,
@@ -94,15 +115,13 @@ class _RegionSelectorPageState extends State<RegionSelectorPage>
         _selectionRect.bottomCenter,
         _selectionRect.bottomRight,
       ];
-
       for (final center in handleCenters) {
-        if ((mousePos - center).distance <= handleRadius * 1.5) {
+        if ((mousePos - center).distance <= handleRadius) {
           isOverHandle = true;
           break;
         }
       }
 
-      // 3. Drag Bar Zone
       final dragBarZone = Rect.fromLTWH(
         _selectionRect.left,
         _selectionRect.top - _dragBarHeight,
@@ -110,7 +129,6 @@ class _RegionSelectorPageState extends State<RegionSelectorPage>
         _dragBarHeight,
       );
 
-      // 4. Toolbar Zone
       final toolbarZone = Rect.fromLTWH(
         _selectionRect.left,
         _selectionRect.bottom,
@@ -118,19 +136,16 @@ class _RegionSelectorPageState extends State<RegionSelectorPage>
         _toolbarHeight + 10,
       );
 
-      // Solid if over Border OR Handle OR Drag Bar OR Toolbar
       bool isOverInteractionZone =
           isOverHandle ||
           isOverBorder ||
           dragBarZone.contains(mousePos) ||
           toolbarZone.contains(mousePos);
 
-      // If locked (recording), we ONLY care about the toolbar
       if (_isLocked) {
         isOverInteractionZone = toolbarZone.contains(mousePos);
       }
 
-      // If we are currently resizing/moving, keep it solid
       if (_activeResizeMode != _ResizeMode.none) {
         isOverInteractionZone = true;
       }
@@ -146,21 +161,54 @@ class _RegionSelectorPageState extends State<RegionSelectorPage>
     });
   }
 
-  @override
-  void dispose() {
-    _mouseTracker?.cancel();
-    windowManager.removeListener(this);
-    super.dispose();
+  // ── Draw-mode helpers ─────────────────────────────────────────────────────
+
+  /// Converts two arbitrary offsets into a normalised Rect (left < right, top < bottom).
+  Rect _normalise(Offset a, Offset b) => Rect.fromLTRB(
+    a.dx < b.dx ? a.dx : b.dx,
+    a.dy < b.dy ? a.dy : b.dy,
+    a.dx > b.dx ? a.dx : b.dx,
+    a.dy > b.dy ? a.dy : b.dy,
+  );
+
+  void _onDrawStart(DragStartDetails details) {
+    setState(() {
+      _drawStart = details.localPosition;
+      _drawCurrent = details.localPosition;
+    });
   }
 
-  @override
-  void onWindowFocus() {
-    if (_isLocked && mounted) {
-      setState(() => _isLocked = false);
-      widget.onIgnoreMouseEvents(false);
+  void _onDrawUpdate(DragUpdateDetails details) {
+    setState(() => _drawCurrent = details.localPosition);
+  }
+
+  void _onDrawEnd(DragEndDetails _) {
+    if (_drawStart == null || _drawCurrent == null) return;
+
+    final drawn = _normalise(_drawStart!, _drawCurrent!);
+
+    // Require a minimum 60×60 selection; otherwise reset and let user try again
+    if (drawn.width < 60 || drawn.height < 60) {
+      setState(() {
+        _drawStart = null;
+        _drawCurrent = null;
+      });
+      return;
     }
+
+    // Transition to adjust mode
+    setState(() {
+      _isDrawMode = false;
+      _selectionRect = drawn;
+      _drawStart = null;
+      _drawCurrent = null;
+    });
+
+    widget.onRegionSelected(_selectionRect);
+    _startMouseTracking();
   }
 
+  // ── Adjust-mode drag helpers ──────────────────────────────────────────────
   void _handleDragUpdate(DragUpdateDetails details) {
     if (_isLocked) return;
 
@@ -237,21 +285,21 @@ class _RegionSelectorPageState extends State<RegionSelectorPage>
           break;
       }
 
-      // Ensure minimum size
-      if (_selectionRect.width < 50) {
+      // Maintain minimum bounds
+      if (_selectionRect.width < 100) {
         _selectionRect = Rect.fromLTWH(
           _selectionRect.left,
           _selectionRect.top,
-          50,
+          100,
           _selectionRect.height,
         );
       }
-      if (_selectionRect.height < 50) {
+      if (_selectionRect.height < 100) {
         _selectionRect = Rect.fromLTWH(
           _selectionRect.left,
           _selectionRect.top,
           _selectionRect.width,
-          50,
+          100,
         );
       }
 
@@ -259,6 +307,7 @@ class _RegionSelectorPageState extends State<RegionSelectorPage>
     });
   }
 
+  // ── Build ─────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     return KeyboardListener(
@@ -271,76 +320,162 @@ class _RegionSelectorPageState extends State<RegionSelectorPage>
       },
       child: Scaffold(
         backgroundColor: Colors.transparent,
-        body: Stack(
-          children: [
-            // The Recording Frame
-            Positioned.fromRect(
-              rect: _selectionRect,
+        body: _isDrawMode
+            ? _buildDrawCanvas(context)
+            : _buildAdjustFrame(context),
+      ),
+    );
+  }
+
+  // ── Draw-mode canvas ──────────────────────────────────────────────────────
+  Widget _buildDrawCanvas(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+    Rect? previewRect;
+    if (_drawStart != null && _drawCurrent != null) {
+      previewRect = _normalise(_drawStart!, _drawCurrent!);
+    }
+
+    return Stack(
+      children: [
+        // Full-screen gesture layer — must cover everything
+        MouseRegion(
+          cursor: SystemMouseCursors.precise,
+          child: GestureDetector(
+            onPanStart: _onDrawStart,
+            onPanUpdate: _onDrawUpdate,
+            onPanEnd: _onDrawEnd,
+            child: CustomPaint(
+              size: size,
+              isComplex: true,
+              willChange: true,
+              painter: _DrawModePainter(previewRect: previewRect),
+            ),
+          ),
+        ),
+
+        // Cancel button (top-right)
+        Positioned(
+          top: 16,
+          right: 16,
+          child: Tooltip(
+            message: 'Cancel (Esc)',
+            child: InkWell(
+              onTap: widget.onCancel,
+              borderRadius: BorderRadius.circular(20),
               child: Container(
+                padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  border: Border.all(color: Colors.red, width: 2),
+                  color: Colors.black54,
+                  borderRadius: BorderRadius.circular(20),
                 ),
-                child: _isLocked ? null : _buildResizeHandles(),
+                child: const Icon(Icons.close, color: Colors.white, size: 20),
               ),
             ),
+          ),
+        ),
 
-            // Top Drag Bar
-            if (!_isLocked)
-              Positioned(
-                top: _selectionRect.top - _dragBarHeight,
-                left: _selectionRect.left,
-                width: _selectionRect.width,
-                child: GestureDetector(
-                  onPanStart: (_) => _activeResizeMode = _ResizeMode.move,
-                  onPanUpdate: _handleDragUpdate,
-                  onPanEnd: (_) => _activeResizeMode = _ResizeMode.none,
-                  child: Container(
-                    height: _dragBarHeight,
-                    decoration: BoxDecoration(
-                      color: Colors.red.withValues(alpha: 0.8),
-                      borderRadius: const BorderRadius.vertical(
-                        top: Radius.circular(4),
-                      ),
-                    ),
-                    child: const Center(
-                      child: Icon(
-                        Icons.drag_handle,
-                        color: Colors.white,
-                        size: 20,
-                      ),
-                    ),
+        // Instruction hint
+        if (previewRect == null)
+          const Positioned(
+            bottom: 40,
+            left: 0,
+            right: 0,
+            child: Center(child: _DrawHint()),
+          ),
+
+        // Size label while drawing
+        if (previewRect != null &&
+            previewRect.width >= 20 &&
+            previewRect.height >= 20)
+          Positioned(
+            left: previewRect.left + 6,
+            top: previewRect.top + 6,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.5),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(
+                '${previewRect.width.toInt()} × ${previewRect.height.toInt()}',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 11,
+                  fontFamily: 'Consolas',
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  // ── Existing adjust-mode frame ────────────────────────────────────────────
+  Widget _buildAdjustFrame(BuildContext context) {
+    return Stack(
+      children: [
+        // The Recording Frame (Hollow Center)
+        Positioned.fromRect(
+          rect: _selectionRect,
+          child: Container(
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.red, width: 2),
+            ),
+            child: _isLocked ? null : _buildResizeHandles(),
+          ),
+        ),
+
+        // Top Drag Handle Bar
+        if (!_isLocked)
+          Positioned(
+            top: _selectionRect.top - _dragBarHeight,
+            left: _selectionRect.left,
+            width: _selectionRect.width,
+            child: GestureDetector(
+              onPanStart: (_) => _activeResizeMode = _ResizeMode.move,
+              onPanUpdate: _handleDragUpdate,
+              onPanEnd: (_) => _activeResizeMode = _ResizeMode.none,
+              child: Container(
+                height: _dragBarHeight,
+                decoration: BoxDecoration(
+                  color: Colors.red.withValues(alpha: 0.8),
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(4),
                   ),
                 ),
-              ),
-
-            // Toolbar (Interactive Island)
-            Positioned(
-              top: _selectionRect.bottom + 5,
-              left: _selectionRect.left,
-              width: _selectionRect.width,
-              child: _buildToolbar(),
-            ),
-
-            // Close Button (Floating)
-            if (!_isLocked)
-              Positioned(
-                top: _selectionRect.top - 40,
-                right: MediaQuery.of(context).size.width - _selectionRect.right,
-                child: IconButton(
-                  icon: const Icon(Icons.close, color: Colors.red, size: 24),
-                  onPressed: widget.onCancel,
+                child: const Center(
+                  child: Icon(Icons.drag_handle, color: Colors.white, size: 20),
                 ),
               ),
-          ],
+            ),
+          ),
+
+        // Main Toolbar
+        Positioned(
+          top: _selectionRect.bottom + 5,
+          left: _selectionRect.left,
+          width: _selectionRect.width,
+          child: _buildToolbar(),
         ),
-      ),
+
+        // Floating Close Button
+        if (!_isLocked)
+          Positioned(
+            top: _selectionRect.top - 40,
+            right: MediaQuery.of(context).size.width - _selectionRect.right,
+            child: IconButton(
+              icon: const Icon(Icons.close, color: Colors.red, size: 24),
+              onPressed: widget.onCancel,
+            ),
+          ),
+      ],
     );
   }
 
   Widget _buildResizeHandles() {
     return Stack(
       children: [
-        // Corners
         _buildHandle(Alignment.topLeft, _ResizeMode.topLeft, Icons.north_west),
         _buildHandle(
           Alignment.topRight,
@@ -357,8 +492,6 @@ class _RegionSelectorPageState extends State<RegionSelectorPage>
           _ResizeMode.bottomRight,
           Icons.south_east,
         ),
-
-        // Midpoints
         _buildHandle(Alignment.topCenter, _ResizeMode.topCenter, Icons.north),
         _buildHandle(
           Alignment.bottomCenter,
@@ -383,13 +516,14 @@ class _RegionSelectorPageState extends State<RegionSelectorPage>
         onPanUpdate: _handleDragUpdate,
         onPanEnd: (_) => _activeResizeMode = _ResizeMode.none,
         child: Container(
-          width: _handleSize * 2,
-          height: _handleSize * 2,
+          width: _handleSize * 2.5,
+          height: _handleSize * 2.5,
           decoration: const BoxDecoration(
             color: Colors.red,
             shape: BoxShape.circle,
+            boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 4)],
           ),
-          child: Icon(icon, size: 10, color: Colors.white),
+          child: Icon(icon, size: 12, color: Colors.white),
         ),
       ),
     );
@@ -399,25 +533,22 @@ class _RegionSelectorPageState extends State<RegionSelectorPage>
     return Center(
       child: Container(
         height: _toolbarHeight,
-        constraints: const BoxConstraints(maxWidth: 400),
+        padding: const EdgeInsets.symmetric(horizontal: 16),
         decoration: BoxDecoration(
           color: const Color(0xFF2D2D2D),
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: const [
-            BoxShadow(color: Colors.black54, blurRadius: 10, spreadRadius: 1),
-          ],
+          borderRadius: BorderRadius.circular(22),
+          boxShadow: const [BoxShadow(color: Colors.black54, blurRadius: 10)],
           border: _isLocked ? Border.all(color: Colors.amber, width: 2) : null,
         ),
-        padding: const EdgeInsets.symmetric(horizontal: 16),
         child: ListenableBuilder(
           listenable: widget.controller,
           builder: (context, _) {
             return Row(
               mainAxisSize: MainAxisSize.min,
               children: [
+                // Record/Stop Button
                 IconButton(
                   padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
                   icon: Icon(
                     widget.controller.isRecording
                         ? Icons.stop
@@ -444,12 +575,10 @@ class _RegionSelectorPageState extends State<RegionSelectorPage>
                                 label: 'VIEW',
                                 textColor: Colors.white,
                                 onPressed: () {
-                                  if (widget.controller.lastSavedFile != null) {
-                                    Process.run('explorer.exe', [
-                                      '/select,',
-                                      widget.controller.lastSavedFile!,
-                                    ]);
-                                  }
+                                  Process.run('explorer.exe', [
+                                    '/select,',
+                                    widget.controller.lastSavedFile!,
+                                  ]);
                                 },
                               ),
                             ),
@@ -457,13 +586,8 @@ class _RegionSelectorPageState extends State<RegionSelectorPage>
                         }
                       }
 
-                      if (widget.controller.isRecording) {
-                        setState(() => _isLocked = true);
-                        widget.onIgnoreMouseEvents(true);
-                      } else {
-                        setState(() => _isLocked = false);
-                        widget.onIgnoreMouseEvents(false);
-                      }
+                      setState(() => _isLocked = widget.controller.isRecording);
+                      widget.onIgnoreMouseEvents(_isLocked);
                     } catch (e) {
                       if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
@@ -476,25 +600,37 @@ class _RegionSelectorPageState extends State<RegionSelectorPage>
                     }
                   },
                 ),
+
+                const SizedBox(width: 8),
+
+                // Audio Meter
+                AudioMeter(isRecording: widget.controller.isRecording),
+
                 const SizedBox(width: 12),
+
+                // Duration Timer
                 Text(
                   widget.controller.formatDuration(
                     widget.controller.recordDuration,
                   ),
-                  style: TextStyle(
-                    color: widget.controller.isRecording
-                        ? Colors.red
-                        : Colors.white,
-                    fontWeight: FontWeight.bold,
+                  style: const TextStyle(
+                    color: Colors.white,
                     fontFamily: 'Consolas',
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
                   ),
                 ),
+
                 const SizedBox(width: 12),
-                VerticalDivider(
-                  color: Colors.grey.shade700,
+
+                const VerticalDivider(
+                  color: Colors.white24,
+                  width: 1,
                   indent: 10,
                   endIndent: 10,
                 ),
+
+                // Lock Interaction Toggle
                 IconButton(
                   icon: Icon(
                     _isLocked ? Icons.lock : Icons.lock_open,
@@ -508,6 +644,8 @@ class _RegionSelectorPageState extends State<RegionSelectorPage>
                     });
                   },
                 ),
+
+                // Exit to Dashboard
                 IconButton(
                   icon: const Icon(
                     Icons.dashboard,
@@ -520,6 +658,112 @@ class _RegionSelectorPageState extends State<RegionSelectorPage>
             );
           },
         ),
+      ),
+    );
+  }
+}
+
+// ── CustomPainter for draw-mode canvas ────────────────────────────────────────
+class _DrawModePainter extends CustomPainter {
+  final Rect? previewRect;
+
+  const _DrawModePainter({this.previewRect});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    // saveLayer is required so BlendMode.clear punches through to transparency
+    canvas.saveLayer(Offset.zero & size, Paint());
+
+    // Very subtle dark vignette to signal draw mode without blocking the screen
+    canvas.drawRect(
+      Offset.zero & size,
+      Paint()..color = const Color(0x33000000), // ~20% opacity
+    );
+
+    if (previewRect != null) {
+      // Punch a transparent hole in the overlay for the selected area
+      canvas.drawRect(
+        previewRect!,
+        Paint()
+          ..blendMode = BlendMode.clear
+          ..color = Colors.transparent,
+      );
+
+      // Selection border
+      canvas.drawRect(
+        previewRect!,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..color = const Color(0xFFFF4444)
+          ..strokeWidth = 2.0,
+      );
+
+      // Corner ticks for visual clarity
+      _drawCornerTicks(canvas, previewRect!);
+    }
+
+    canvas.restore();
+  }
+
+  void _drawCornerTicks(Canvas canvas, Rect r) {
+    const tickLen = 14.0;
+    final p = Paint()
+      ..color = Colors.white
+      ..strokeWidth = 2.0
+      ..style = PaintingStyle.stroke;
+
+    // Top-left
+    canvas.drawLine(r.topLeft, r.topLeft + const Offset(tickLen, 0), p);
+    canvas.drawLine(r.topLeft, r.topLeft + const Offset(0, tickLen), p);
+    // Top-right
+    canvas.drawLine(r.topRight, r.topRight + const Offset(-tickLen, 0), p);
+    canvas.drawLine(r.topRight, r.topRight + const Offset(0, tickLen), p);
+    // Bottom-left
+    canvas.drawLine(r.bottomLeft, r.bottomLeft + const Offset(tickLen, 0), p);
+    canvas.drawLine(r.bottomLeft, r.bottomLeft + const Offset(0, -tickLen), p);
+    // Bottom-right
+    canvas.drawLine(
+      r.bottomRight,
+      r.bottomRight + const Offset(-tickLen, 0),
+      p,
+    );
+    canvas.drawLine(
+      r.bottomRight,
+      r.bottomRight + const Offset(0, -tickLen),
+      p,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_DrawModePainter old) => old.previewRect != previewRect;
+}
+
+// ── Static hint widget ─────────────────────────────────────────────────────────
+class _DrawHint extends StatelessWidget {
+  const _DrawHint();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(0.5),
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: const Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.crop_free, color: Colors.white70, size: 18),
+          SizedBox(width: 10),
+          Text(
+            'Click and drag to select a recording area  •  Esc to cancel',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
       ),
     );
   }

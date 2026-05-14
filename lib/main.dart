@@ -37,6 +37,8 @@ void main() async {
   windowManager.waitUntilReadyToShow(windowOptions, () async {
     await windowManager.show();
     await windowManager.focus();
+    // Guarantee mouse events are enabled on launch
+    await windowManager.setIgnoreMouseEvents(false);
   });
 
   runApp(const KlippApp());
@@ -74,6 +76,7 @@ class _RecorderDashboardState extends State<RecorderDashboard> {
   String _outputDir = 'Loading...';
   int _selectedIndex = 0;
   bool _isSelectingRegion = false;
+  Rect? _initialRegion;
 
   late RecorderController _recorderController;
   late ConverterController _converterController;
@@ -103,7 +106,7 @@ class _RecorderDashboardState extends State<RecorderDashboard> {
           recorder: _recorder,
           outputDir: _outputDir,
           onRecordingSaved: () => _galleryController.loadFiles(),
-          onSelectRegion: _enterSelectionMode,
+          onSelectRegion: (rect) => _enterSelectionMode(rect),
         );
         _converterController = ConverterController(
           recorder: _recorder,
@@ -133,13 +136,18 @@ class _RecorderDashboardState extends State<RecorderDashboard> {
     super.dispose();
   }
 
-  Future<void> _enterSelectionMode() async {
+  Future<void> _enterSelectionMode(Rect? initial) async {
     await windowManager.setFullScreen(true);
     await windowManager.setAlwaysOnTop(true);
-    setState(() => _isSelectingRegion = true);
+    setState(() {
+      _initialRegion = initial;
+      _isSelectingRegion = true;
+    });
   }
 
   Future<void> _exitSelectionMode() async {
+    // Always re-enable mouse events when returning to the dashboard
+    await windowManager.setIgnoreMouseEvents(false);
     await windowManager.setAlwaysOnTop(false);
     await windowManager.setFullScreen(false);
     await windowManager.setSize(const Size(1280, 720));
@@ -177,6 +185,7 @@ class _RecorderDashboardState extends State<RecorderDashboard> {
       body: _isSelectingRegion
           ? RegionSelectorPage(
               controller: _recorderController,
+              initialRect: _initialRegion,
               onIgnoreMouseEvents: (ignore) async {
                 await windowManager.setIgnoreMouseEvents(ignore);
               },

@@ -19,6 +19,8 @@ class DesktopScreenRecorder {
     int? y,
     int? width,
     int? height,
+    bool includeAudio = false,
+    String? audioDevice,
   }) async {
     if (_recordingProcess != null) {
       throw Exception('Already recording');
@@ -35,31 +37,43 @@ class DesktopScreenRecorder {
     _currentOutputPath = '${klippDir.path}\\$name';
 
     try {
-      final List<String> args = [
-        '-f',
-        'gdigrab',
-        '-framerate',
-        '30',
-      ];
+      final List<String> args = [];
 
-      if (x != null && y != null && width != null && height != null) {
+      // Audio Input
+      if (includeAudio && audioDevice != null) {
         args.addAll([
-          '-offset_x',
-          '$x',
-          '-offset_y',
-          '$y',
-          '-video_size',
-          '${width}x$height',
+          '-f', 'dshow',
+          '-i', 'audio=$audioDevice',
         ]);
       }
 
+      // Video Input (gdigrab)
       args.addAll([
-        '-i',
-        'desktop',
-        '-c:v',
-        'libx264',
-        '-preset',
-        'ultrafast',
+        '-f', 'gdigrab',
+        '-framerate', '30',
+      ]);
+
+      if (x != null && y != null && width != null && height != null) {
+        args.addAll([
+          '-offset_x', '$x',
+          '-offset_y', '$y',
+          '-video_size', '${width}x$height',
+        ]);
+      }
+
+      args.addAll(['-i', 'desktop']);
+
+      // Encoding settings
+      args.addAll([
+        '-c:v', 'libx264',
+        '-preset', 'ultrafast',
+      ]);
+
+      if (includeAudio && audioDevice != null) {
+        args.addAll(['-c:a', 'aac', '-b:a', '128k']);
+      }
+
+      args.addAll([
         '-y',
         _currentOutputPath!
       ]);
@@ -144,6 +158,36 @@ class DesktopScreenRecorder {
     final exitCode = await process.exitCode;
     if (exitCode != 0) {
       throw Exception('FFmpeg conversion failed with exit code $exitCode');
+    }
+  }
+
+  /// Lists available DirectShow audio devices on Windows.
+  Future<List<String>> listAudioDevices() async {
+    try {
+      final process = await Process.run('ffmpeg', [
+        '-list_devices', 'true',
+        '-f', 'dshow',
+        '-i', 'dummy'
+      ]);
+
+      // FFmpeg outputs device lists to stderr
+      final output = process.stderr.toString();
+      final List<String> devices = [];
+      
+      // FFmpeg 8.x uses [in#N @ addr] tags instead of [dshow @ addr]
+      // Match any log-prefix tag followed by a quoted name and (audio)
+      final regExp = RegExp(r'\[[^\]]+\]\s+"([^"]+)"\s+\(audio\)');
+      final matches = regExp.allMatches(output);
+      
+      for (final match in matches) {
+        if (match.groupCount >= 1) {
+          devices.add(match.group(1)!);
+        }
+      }
+
+      return devices;
+    } catch (e) {
+      return [];
     }
   }
 }
