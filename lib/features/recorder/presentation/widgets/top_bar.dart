@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import '../../../../core/styles/app_styles.dart';
 import '../controllers/recorder_controller.dart';
+import 'audio_source_dropdown.dart';
 
 class TopBar extends StatelessWidget {
   final int selectedIndex;
@@ -54,6 +55,34 @@ class TopBar extends StatelessWidget {
               if (selectedIndex == 0) ...[
                 _buildFormatSelector(),
                 const SizedBox(width: 16),
+                AudioSourceDropdown(
+                  icon: Icons.volume_up,
+                  isEnabled: recorderController.speakerEnabled,
+                  volume: recorderController.speakerVolume,
+                  devices: recorderController.availableAudioDevices,
+                  selectedDevice: recorderController.selectedSpeakerDevice,
+                  meterColor: Colors.orange,
+                  onToggle: (v) => recorderController.speakerEnabled = v,
+                  onVolumeChanged: (v) => recorderController.speakerVolume = v,
+                  onDeviceSelected: (v) =>
+                      recorderController.selectedSpeakerDevice = v,
+                ),
+                const SizedBox(width: 8),
+                AudioSourceDropdown(
+                  icon: Icons.mic,
+                  isEnabled: recorderController.micEnabled,
+                  volume: recorderController.micVolume,
+                  devices: recorderController.availableAudioDevices,
+                  selectedDevice: recorderController.selectedMicDevice,
+                  meterColor: Colors.green,
+                  onToggle: (v) => recorderController.micEnabled = v,
+                  onVolumeChanged: (v) => recorderController.micVolume = v,
+                  onDeviceSelected: (v) =>
+                      recorderController.selectedMicDevice = v,
+                ),
+                const SizedBox(width: 32),
+                _buildPauseButton(),
+                const SizedBox(width: 12),
                 _buildRecordButton(context),
                 const SizedBox(width: 16),
                 _buildDurationDisplay(),
@@ -102,10 +131,12 @@ class TopBar extends StatelessWidget {
             final w = double.parse(parts[0]);
             final h = double.parse(parts[1]);
             recorderController.recordingMode = 'Rectangle';
-            
+
             // Start selection mode with the predefined size (centered roughly)
             // Use 100, 100 as a safe starting point that isn't under the taskbar/topbar
-            recorderController.startRegionSelection(Rect.fromLTWH(200, 100, w, h));
+            recorderController.startRegionSelection(
+              Rect.fromLTWH(200, 100, w, h),
+            );
           } else if (value == 'select_area') {
             recorderController.startRegionSelection();
           }
@@ -195,6 +226,29 @@ class TopBar extends StatelessWidget {
             : AppColors.textSecondary,
         fontWeight: FontWeight.bold,
         fontFamily: 'Consolas',
+      ),
+    );
+  }
+
+  Widget _buildPauseButton() {
+    return Container(
+      decoration: const BoxDecoration(
+        shape: BoxShape.circle,
+        color: AppColors.background,
+      ),
+      child: IconButton(
+        onPressed: recorderController.isRecording
+            ? () {
+                recorderController.togglePause();
+              }
+            : null,
+        icon: Icon(
+          recorderController.isPaused ? Icons.play_arrow : Icons.pause,
+          color: recorderController.isRecording
+              ? (recorderController.isPaused ? Colors.amber : Colors.white)
+              : Colors.white38,
+        ),
+        tooltip: recorderController.isPaused ? 'Resume' : 'Pause',
       ),
     );
   }

@@ -11,8 +11,13 @@ class RecorderController extends ChangeNotifier {
   final Function(Rect?) onSelectRegion;
 
   bool _isRecording = false;
-  bool _includeAudio = true;
-  String? _selectedAudioDevice;
+  bool _isPaused = false;
+  bool _speakerEnabled = false; // System audio disabled by default
+  bool _micEnabled = true; // Mic enabled by default
+  double _speakerVolume = 1.0;
+  double _micVolume = 1.0;
+  String? _selectedSpeakerDevice;
+  String? _selectedMicDevice;
   List<String> _availableAudioDevices = [];
   int _recordDuration = 0;
   Timer? _timer;
@@ -26,12 +31,63 @@ class RecorderController extends ChangeNotifier {
     required this.outputDir,
     required this.onRecordingSaved,
     required this.onSelectRegion,
-  });
+  }) {
+    _loadDevices();
+  }
+
+  Future<void> _loadDevices() async {
+    _availableAudioDevices = await recorder.listAudioDevices();
+    if (_availableAudioDevices.isNotEmpty) {
+      _selectedMicDevice ??= _availableAudioDevices.first;
+      try {
+         _selectedSpeakerDevice ??= _availableAudioDevices.firstWhere((d) => d.toLowerCase().contains('mix') || d.toLowerCase().contains('output'));
+      } catch (_) {
+         _selectedSpeakerDevice ??= _availableAudioDevices.first;
+      }
+    }
+    notifyListeners();
+  }
 
   bool get isRecording => _isRecording;
-  bool get includeAudio => _includeAudio;
-  String? get selectedAudioDevice => _selectedAudioDevice;
+  bool get isPaused => _isPaused;
+  bool get speakerEnabled => _speakerEnabled;
+  bool get micEnabled => _micEnabled;
+  double get speakerVolume => _speakerVolume;
+  double get micVolume => _micVolume;
+  String? get selectedSpeakerDevice => _selectedSpeakerDevice;
+  String? get selectedMicDevice => _selectedMicDevice;
   List<String> get availableAudioDevices => _availableAudioDevices;
+
+  set speakerEnabled(bool val) {
+    _speakerEnabled = val;
+    notifyListeners();
+  }
+
+  set micEnabled(bool val) {
+    _micEnabled = val;
+    notifyListeners();
+  }
+
+  set speakerVolume(double val) {
+    _speakerVolume = val;
+    notifyListeners();
+  }
+
+  set micVolume(double val) {
+    _micVolume = val;
+    notifyListeners();
+  }
+
+  set selectedSpeakerDevice(String? val) {
+    _selectedSpeakerDevice = val;
+    notifyListeners();
+  }
+
+  set selectedMicDevice(String? val) {
+    _selectedMicDevice = val;
+    notifyListeners();
+  }
+
   int get recordDuration => _recordDuration;
   String? get lastSavedFile => _lastSavedFile;
   String get selectedFormat => _selectedFormat;
@@ -57,10 +113,12 @@ class RecorderController extends ChangeNotifier {
   }
 
   void _startTimer() {
-    _recordDuration = 0;
+    _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      _recordDuration++;
-      notifyListeners();
+      if (!_isPaused) {
+        _recordDuration++;
+        notifyListeners();
+      }
     });
   }
 
@@ -72,6 +130,7 @@ class RecorderController extends ChangeNotifier {
   Future<void> toggleRecording() async {
     if (_isRecording) {
       _isRecording = false;
+      _isPaused = false;
       _stopTimer();
       _recordDuration = 0; // Reset immediately
       notifyListeners();
@@ -87,7 +146,9 @@ class RecorderController extends ChangeNotifier {
       }
     } else {
       _isRecording = true;
+      _isPaused = false;
       _lastSavedFile = null;
+      _recordDuration = 0;
       _startTimer();
       notifyListeners();
       try {
@@ -111,10 +172,21 @@ class RecorderController extends ChangeNotifier {
         }
 
         // Fetch audio devices if needed
-        if (_includeAudio && _availableAudioDevices.isEmpty) {
+        if ((_speakerEnabled || _micEnabled) &&
+            _availableAudioDevices.isEmpty) {
           _availableAudioDevices = await recorder.listAudioDevices();
           if (_availableAudioDevices.isNotEmpty) {
-            _selectedAudioDevice = _availableAudioDevices.first;
+            _selectedMicDevice ??= _availableAudioDevices.first;
+            // Best effort to auto-select stereo mix or default output for speaker
+            try {
+              _selectedSpeakerDevice ??= _availableAudioDevices.firstWhere(
+                (d) =>
+                    d.toLowerCase().contains('mix') ||
+                    d.toLowerCase().contains('output'),
+              );
+            } catch (_) {
+              _selectedSpeakerDevice ??= _availableAudioDevices.first;
+            }
           }
         }
 
@@ -124,8 +196,12 @@ class RecorderController extends ChangeNotifier {
           y: y,
           width: width,
           height: height,
-          includeAudio: _includeAudio,
-          audioDevice: _selectedAudioDevice,
+          speakerEnabled: _speakerEnabled,
+          micEnabled: _micEnabled,
+          speakerDevice: _selectedSpeakerDevice,
+          micDevice: _selectedMicDevice,
+          speakerVolume: _speakerVolume,
+          micVolume: _micVolume,
         );
       } catch (e, stackTrace) {
         _isRecording = false;
@@ -142,6 +218,16 @@ class RecorderController extends ChangeNotifier {
       'Entering region selection mode with initial rect: $initialRect',
     );
     onSelectRegion(initialRect);
+  }
+
+  void togglePause() {
+    if (_isRecording) {
+      _isPaused = !_isPaused;
+      notifyListeners();
+      AppLogger.info('Recording paused state changed to: $_isPaused');
+      // Note: True FFmpeg pausing requires suspending the process or splitting the video.
+      // Currently, this just pauses the timer UI.
+    }
   }
 
   String formatDuration(int seconds) {

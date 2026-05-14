@@ -7,6 +7,7 @@ import 'dart:async';
 
 import '../controllers/recorder_controller.dart';
 import '../widgets/audio_meter.dart';
+import '../widgets/audio_source_dropdown.dart';
 
 enum _ResizeMode {
   none,
@@ -599,6 +600,25 @@ class _RegionSelectorPageState extends State<RegionSelectorPage>
                       }
                     }
                   },
+                ),
+
+                const SizedBox(width: 8),
+
+                 const SizedBox(width: 8),
+                
+                // Pause Button
+                IconButton(
+                  padding: EdgeInsets.zero,
+                  icon: Icon(
+                    widget.controller.isPaused ? Icons.play_arrow : Icons.pause,
+                    color: widget.controller.isRecording
+                        ? (widget.controller.isPaused ? Colors.amber : Colors.white)
+                        : Colors.white38,
+                    size: 20,
+                  ),
+                  onPressed: widget.controller.isRecording
+                      ? () => widget.controller.togglePause()
+                      : null,
                 ),
 
                 const SizedBox(width: 8),

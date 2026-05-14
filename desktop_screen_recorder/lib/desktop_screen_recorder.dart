@@ -19,8 +19,12 @@ class DesktopScreenRecorder {
     int? y,
     int? width,
     int? height,
-    bool includeAudio = false,
-    String? audioDevice,
+    bool speakerEnabled = false,
+    bool micEnabled = false,
+    String? speakerDevice,
+    String? micDevice,
+    double speakerVolume = 1.0,
+    double micVolume = 1.0,
   }) async {
     if (_recordingProcess != null) {
       throw Exception('Already recording');
@@ -39,13 +43,11 @@ class DesktopScreenRecorder {
     try {
       final List<String> args = [];
 
-      // Audio Input
-      if (includeAudio && audioDevice != null) {
-        args.addAll([
-          '-f', 'dshow',
-          '-i', 'audio=$audioDevice',
-        ]);
-      }
+      // Input index tracking
+      int inputIndex = 0;
+      int videoInputIndex = -1;
+      int speakerInputIndex = -1;
+      int micInputIndex = -1;
 
       // Video Input (gdigrab)
       args.addAll([
@@ -60,8 +62,26 @@ class DesktopScreenRecorder {
           '-video_size', '${width}x$height',
         ]);
       }
-
       args.addAll(['-i', 'desktop']);
+      videoInputIndex = inputIndex++;
+
+      // Audio Input 1: Speaker
+      if (speakerEnabled && speakerDevice != null) {
+        args.addAll([
+          '-f', 'dshow',
+          '-i', 'audio=$speakerDevice',
+        ]);
+        speakerInputIndex = inputIndex++;
+      }
+
+      // Audio Input 2: Microphone
+      if (micEnabled && micDevice != null) {
+        args.addAll([
+          '-f', 'dshow',
+          '-i', 'audio=$micDevice',
+        ]);
+        micInputIndex = inputIndex++;
+      }
 
       // Encoding settings
       args.addAll([
@@ -69,8 +89,36 @@ class DesktopScreenRecorder {
         '-preset', 'ultrafast',
       ]);
 
-      if (includeAudio && audioDevice != null) {
-        args.addAll(['-c:a', 'aac', '-b:a', '128k']);
+      // Audio Mixing / Mapping
+      if (speakerInputIndex != -1 && micInputIndex != -1) {
+        // Both enabled: use amix
+        args.addAll([
+          '-filter_complex',
+          '[$speakerInputIndex:a]volume=$speakerVolume[a1]; [$micInputIndex:a]volume=$micVolume[a2]; [a1][a2]amix=inputs=2[aout]',
+          '-map', '$videoInputIndex:v',
+          '-map', '[aout]',
+          '-c:a', 'aac',
+          '-b:a', '128k',
+        ]);
+      } else if (speakerInputIndex != -1) {
+        args.addAll([
+          '-filter_complex', '[$speakerInputIndex:a]volume=$speakerVolume[aout]',
+          '-map', '$videoInputIndex:v',
+          '-map', '[aout]',
+          '-c:a', 'aac',
+          '-b:a', '128k',
+        ]);
+      } else if (micInputIndex != -1) {
+        args.addAll([
+          '-filter_complex', '[$micInputIndex:a]volume=$micVolume[aout]',
+          '-map', '$videoInputIndex:v',
+          '-map', '[aout]',
+          '-c:a', 'aac',
+          '-b:a', '128k',
+        ]);
+      } else {
+        // No audio
+        args.addAll(['-map', '$videoInputIndex:v']);
       }
 
       args.addAll([

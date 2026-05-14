@@ -1,9 +1,9 @@
 # Klipp Screen Recorder 🎬
 
-
 <p align="center">
   <img src="./klipp.gif" alt="Klipp App Demo" width="300"/>
 </p>
+
 > A professional, high-performance screen recording and video conversion tool built with **Flutter** and **FFmpeg**. 
 
 Klipp is designed for power users who need a non-intrusive recording experience. It features a Bandicam-inspired "Ghost Frame" interaction model that lets you work while you record.
@@ -47,7 +47,7 @@ You can download the Windows installer directly to install Klipp without buildin
 
 Run `Klipp_Installer.exe` to install the application.
 
-### Installation
+### Build from source:
 ```bash
 # Clone the repository
 git clone https://github.com/xanderelsmith/klipp.git
@@ -73,6 +73,35 @@ flutter run -d windows
 | **Hollow Mode** | Automatic during Recording |
 | **Move Frame** | Drag the top Red Bar |
 | **Resize** | Use the 8 circular corner handles |
+
+---
+
+## 🎙️ Audio Configuration (Bandicam Style)
+
+Klipp supports dual-audio capture (System Sound + Microphone) with independent volume controls and real-time visual feedback.
+
+### 🟠 System Audio (Orange Meter)
+This captures internal sounds from your computer (videos, music, system alerts):
+1. Select **Stereo Mix** from the Speaker dropdown (Speaker icon).
+2. The **Orange** vertical meter will react to any sound playing *inside* your computer.
+3. *Note: If you don't see "Stereo Mix", ensure it is enabled in your Windows Sound Control Panel (Input devices).*
+
+### 🟢 Microphone (Green Meter)
+This captures your voice or external sounds:
+1. Select your physical microphone from the Mic dropdown (Microphone icon).
+2. The **Green** vertical meter will react when you speak.
+
+### Dual Monitoring
+Klipp uses a dedicated dual-engine monitor. This allows you to verify that both your system sound and your voice are being picked up independently before you start recording.
+
+---
+
+## 🚀 Features Summary
+- **Region Recording**: Select a specific area or use presets.
+- **Dual Audio**: Mix system sounds and microphone with individual levels.
+- **Recording Toolbar**: Real-time duration, audio meters, and pause/stop controls.
+- **Format Support**: Save as MKV (default), MP4, or AVI.
+- **Gallery**: View and manage your recordings directly in the app.
 
 ---
 
