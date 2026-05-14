@@ -285,100 +285,54 @@ class SharedAudioMonitor {
   factory SharedAudioMonitor() => _instance;
   SharedAudioMonitor._internal();
 
-  final AudioRecorder _micRecorder = AudioRecorder();
-  final AudioRecorder _speakerRecorder = AudioRecorder();
+  final AudioRecorder _audioRecorder = AudioRecorder();
+  StreamSubscription<Amplitude>? _amplitudeSubscription;
 
-  StreamSubscription<Amplitude>? _micSubs;
-  StreamSubscription<Amplitude>? _speakerSubs;
-
-  final ValueNotifier<double> micNotifier = ValueNotifier<double>(-60.0);
-  final ValueNotifier<double> speakerNotifier = ValueNotifier<double>(-60.0);
-
-  int _micCount = 0;
-  int _speakerCount = 0;
+  final ValueNotifier<double> amplitudeNotifier = ValueNotifier<double>(-60.0);
+  int _listenerCount = 0;
 
   Future<void> startListening(String? deviceId, bool isSpeaker) async {
-    if (isSpeaker) {
-      _speakerCount++;
-      if (_speakerCount == 1) _startSpeaker(deviceId);
-    } else {
-      _micCount++;
-      if (_micCount == 1) _startMic(deviceId);
-    }
-  }
+    _listenerCount++;
+    if (_listenerCount == 1) {
+      try {
+        if (await _audioRecorder.hasPermission()) {
+          final tempDir = await getTemporaryDirectory();
+          final tempPath = '${tempDir.path}\\klipp_probe_shared.wav';
 
-  Future<void> _startMic(String? deviceId) async {
-    try {
-      if (await _micRecorder.hasPermission()) {
-        final temp = '${(await getTemporaryDirectory()).path}\\mic_probe.wav';
-        InputDevice? target;
-        if (deviceId != null) {
-          final devs = await _micRecorder.listInputDevices();
-          target = devs.cast<InputDevice?>().firstWhere(
-            (d) => d!.label.contains(deviceId) || deviceId.contains(d.label),
-            orElse: () => null,
+          await _audioRecorder.start(
+            const RecordConfig(encoder: AudioEncoder.pcm16bits),
+            path: tempPath,
           );
-        }
-        await _micRecorder.start(
-          RecordConfig(encoder: AudioEncoder.pcm16bits, device: target),
-          path: temp,
-        );
-        _micSubs = _micRecorder
-            .onAmplitudeChanged(const Duration(milliseconds: 30))
-            .listen((amp) => micNotifier.value = amp.current);
-      }
-    } catch (e) {
-      debugPrint('Mic monitor error: $e');
-    }
-  }
 
-  Future<void> _startSpeaker(String? deviceId) async {
-    try {
-      if (await _speakerRecorder.hasPermission()) {
-        final temp = '${(await getTemporaryDirectory()).path}\\spk_probe.wav';
-        InputDevice? target;
-        if (deviceId != null) {
-          final devs = await _speakerRecorder.listInputDevices();
-          target = devs.cast<InputDevice?>().firstWhere(
-            (d) => d!.label.contains(deviceId) || deviceId.contains(d.label),
-            orElse: () => null,
-          );
+          _amplitudeSubscription = _audioRecorder
+              .onAmplitudeChanged(const Duration(milliseconds: 30))
+              .listen((amp) {
+                amplitudeNotifier.value = amp.current;
+              });
         }
-        await _speakerRecorder.start(
-          RecordConfig(encoder: AudioEncoder.pcm16bits, device: target),
-          path: temp,
-        );
-        _speakerSubs = _speakerRecorder
-            .onAmplitudeChanged(const Duration(milliseconds: 30))
-            .listen((amp) => speakerNotifier.value = amp.current);
+      } catch (e) {
+        debugPrint('SharedAudioMonitor start error: $e');
       }
-    } catch (e) {
-      debugPrint('Speaker monitor error: $e');
     }
   }
 
   Future<void> stopListening(String? deviceId, bool isSpeaker) async {
-    if (isSpeaker) {
-      _speakerCount--;
-      if (_speakerCount <= 0) {
-        _speakerCount = 0;
-        await _speakerSubs?.cancel();
-        if (await _speakerRecorder.isRecording()) await _speakerRecorder.stop();
-        speakerNotifier.value = -60.0;
-      }
-    } else {
-      _micCount--;
-      if (_micCount <= 0) {
-        _micCount = 0;
-        await _micSubs?.cancel();
-        if (await _micRecorder.isRecording()) await _micRecorder.stop();
-        micNotifier.value = -60.0;
-      }
+    _listenerCount--;
+    if (_listenerCount <= 0) {
+      _listenerCount = 0;
+      await _amplitudeSubscription?.cancel();
+      _amplitudeSubscription = null;
+      try {
+        if (await _audioRecorder.isRecording()) {
+          await _audioRecorder.stop();
+        }
+      } catch (_) {}
+      amplitudeNotifier.value = -60.0;
     }
   }
 
   ValueNotifier<double> getNotifier(bool isSpeaker) {
-    return isSpeaker ? speakerNotifier : micNotifier;
+    return amplitudeNotifier;
   }
 }
 
@@ -400,27 +354,26 @@ class _MiniVerticalAudioMeter extends StatefulWidget {
 class _MiniVerticalAudioMeterState extends State<_MiniVerticalAudioMeter> {
   final SharedAudioMonitor _monitor = SharedAudioMonitor();
   final int _boxCount = 5;
-  late bool _isSpeaker;
 
   @override
   void initState() {
     super.initState();
-    _isSpeaker = widget.color == Colors.orange;
     if (widget.isEnabled) {
-      _monitor.startListening(widget.deviceId, _isSpeaker);
+      _monitor.startListening(widget.deviceId, widget.color == Colors.orange);
     }
   }
 
   @override
   void didUpdateWidget(_MiniVerticalAudioMeter oldWidget) {
     super.didUpdateWidget(oldWidget);
+    bool isSpeaker = widget.color == Colors.orange;
     if (widget.isEnabled != oldWidget.isEnabled ||
         widget.deviceId != oldWidget.deviceId) {
       if (oldWidget.isEnabled) {
-        _monitor.stopListening(oldWidget.deviceId, _isSpeaker);
+        _monitor.stopListening(oldWidget.deviceId, isSpeaker);
       }
       if (widget.isEnabled) {
-        _monitor.startListening(widget.deviceId, _isSpeaker);
+        _monitor.startListening(widget.deviceId, isSpeaker);
       }
     }
   }
@@ -428,7 +381,7 @@ class _MiniVerticalAudioMeterState extends State<_MiniVerticalAudioMeter> {
   @override
   void dispose() {
     if (widget.isEnabled) {
-      _monitor.stopListening(widget.deviceId, _isSpeaker);
+      _monitor.stopListening(widget.deviceId, widget.color == Colors.orange);
     }
     super.dispose();
   }
@@ -436,7 +389,7 @@ class _MiniVerticalAudioMeterState extends State<_MiniVerticalAudioMeter> {
   @override
   Widget build(BuildContext context) {
     return ValueListenableBuilder<double>(
-      valueListenable: _monitor.getNotifier(_isSpeaker),
+      valueListenable: _monitor.getNotifier(widget.color == Colors.orange),
       builder: (context, currentAmplitude, child) {
         // Normalize amplitude from -50..0 to 0.0..1.0 for better sensitivity
         double normalized = ((currentAmplitude + 50) / 50).clamp(0.0, 1.0);

@@ -42,7 +42,7 @@ class _AudioMeterState extends State<AudioMeter> {
   @override
   Widget build(BuildContext context) {
     return ValueListenableBuilder<double>(
-      valueListenable: _monitor.micNotifier,
+      valueListenable: _monitor.getNotifier(false),
       builder: (context, amplitude, child) {
         _updateBars(amplitude);
         
