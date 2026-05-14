@@ -37,13 +37,10 @@ class Sidebar extends StatelessWidget {
       padding: const EdgeInsets.all(24.0),
       child: Row(
         children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: AppColors.primary,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: const Icon(Icons.videocam, color: Colors.white, size: 24),
+          Image.asset(
+            'appicon.png',
+            width: 40,
+            height: 40,
           ),
           const SizedBox(width: 12),
           const Text(
