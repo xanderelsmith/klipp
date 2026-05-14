@@ -146,7 +146,7 @@ class SettingsPage extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    '1. Download from ffmpeg.org\n'
+                    '1. Download Windows build from gyan.dev\n'
                     '2. Extract to a folder (e.g., C:\\ffmpeg)\n'
                     '3. Add the bin folder to your System PATH environment variable.',
                     style: TextStyle(fontSize: 13, color: AppColors.textSecondary, height: 1.4),
@@ -154,7 +154,7 @@ class SettingsPage extends StatelessWidget {
                   const SizedBox(height: 12),
                   TextButton.icon(
                     onPressed: () {
-                      Clipboard.setData(const ClipboardData(text: 'https://ffmpeg.org/download.html'));
+                      Clipboard.setData(const ClipboardData(text: 'https://www.gyan.dev/ffmpeg/builds/'));
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(content: Text('Link copied to clipboard')),
                       );

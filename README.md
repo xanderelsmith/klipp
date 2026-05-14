@@ -35,7 +35,14 @@ The built-in gallery tracks your `klippvideos` folder in real-time. If you renam
 
 ### Prerequisites
 - **FFmpeg**: Must be installed and added to your **System PATH**. 
+  - Download for Windows: [https://www.gyan.dev/ffmpeg/builds/](https://www.gyan.dev/ffmpeg/builds/) (Download the "release essentials" zip, extract, and add the `bin` folder to PATH).
 - **Flutter SDK**: Required if you intend to build from source.
+
+### Download 📥
+You can download the Windows installer directly to install Klipp without building from source:
+[Download Klipp Installer](Klipp_Installer.exe)
+
+Run `Klipp_Installer.exe` to install the application.
 
 ### Installation
 ```bash
