@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../../core/styles/app_styles.dart';
+import '../../../../core/utils/info.dart';
 import '../controllers/settings_controller.dart';
 
 class SettingsPage extends StatelessWidget {
@@ -13,32 +14,75 @@ class SettingsPage extends StatelessWidget {
     return ListenableBuilder(
       listenable: controller,
       builder: (context, _) {
-        return Padding(
+        return SingleChildScrollView(
           padding: AppStyles.pagePadding,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'System Requirements',
-                style: AppStyles.h1,
-              ),
+              const Text('System Requirements', style: AppStyles.h1),
               const SizedBox(height: 24),
               _buildFfmpegSection(context),
               const SizedBox(height: 32),
-              const Text(
-                'About Klipp',
-                style: AppStyles.h2,
-              ),
-              const SizedBox(height: 12),
-              const Text(
-                'Klipp uses FFmpeg for high-performance screen recording and video conversion. '
-                'Ensure FFmpeg is installed and added to your system PATH for all features to work correctly.',
-                style: TextStyle(color: AppColors.textSecondary, height: 1.5),
-              ),
+              const Text('Usage & Tips', style: AppStyles.h1),
+              const SizedBox(height: 24),
+              _buildUsageSection(),
+              const SizedBox(height: 40),
+              _buildAboutFooter(),
             ],
           ),
         );
       },
+    );
+  }
+
+  Widget _buildUsageSection() {
+    return Column(
+      children: AppInfo.usageRules.map((rule) {
+        return Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AppColors.sidebar,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Icon(Icons.lightbulb_outline, color: AppColors.accent, size: 20),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(rule['title']!, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                    const SizedBox(height: 4),
+                    Text(
+                      rule['description']!,
+                      style: const TextStyle(color: AppColors.textSecondary, fontSize: 13, height: 1.4),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildAboutFooter() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('About Klipp', style: AppStyles.h2),
+        const SizedBox(height: 12),
+        Text(
+          'Klipp version ${AppInfo.version} - Designed by ${AppInfo.developer}\n'
+          'A professional-grade screen recorder built with Flutter and FFmpeg.',
+          style: const TextStyle(color: AppColors.textSecondary, fontSize: 12, height: 1.6),
+        ),
+      ],
     );
   }
 

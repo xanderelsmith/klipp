@@ -33,7 +33,7 @@ void main() async {
     skipTaskbar: false,
     titleBarStyle: TitleBarStyle.normal,
   );
-  
+
   windowManager.waitUntilReadyToShow(windowOptions, () async {
     await windowManager.show();
     await windowManager.focus();
@@ -166,7 +166,9 @@ class _RecorderDashboardState extends State<RecorderDashboard> {
   Widget build(BuildContext context) {
     if (!_isInitialized) {
       return const Scaffold(
-        body: Center(child: CircularProgressIndicator(color: AppColors.primary)),
+        body: Center(
+          child: CircularProgressIndicator(color: AppColors.primary),
+        ),
       );
     }
 
@@ -188,7 +190,8 @@ class _RecorderDashboardState extends State<RecorderDashboard> {
               children: [
                 Sidebar(
                   selectedIndex: _selectedIndex,
-                  onItemSelected: (index) => setState(() => _selectedIndex = index),
+                  onItemSelected: (index) =>
+                      setState(() => _selectedIndex = index),
                 ),
                 Expanded(
                   child: Column(

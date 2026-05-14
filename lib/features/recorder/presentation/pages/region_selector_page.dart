@@ -74,10 +74,35 @@ class _RegionSelectorPageState extends State<RegionSelectorPage>
       // Calculate active zones
       // Zones are: Drag bar, Toolbar, Resize handles
 
-      // Expand rect slightly for handles
-      final expandedRect = _selectionRect.inflate(_handleSize);
+      // 1. The Border Zone (edges)
+      final outerRect = _selectionRect.inflate(_handleSize);
+      final innerRect = _selectionRect.deflate(_handleSize);
+      bool isOverBorder = outerRect.contains(mousePos) && !innerRect.contains(mousePos);
 
-      // Drag Bar Zone
+      // 2. Explicit Handle Zones (for the circular icons)
+      // We check the 4 corners and 4 midpoints specifically
+      bool isOverHandle = false;
+      final handleRadius = _handleSize; 
+      
+      final handleCenters = [
+        _selectionRect.topLeft,
+        _selectionRect.topCenter,
+        _selectionRect.topRight,
+        _selectionRect.centerLeft,
+        _selectionRect.centerRight,
+        _selectionRect.bottomLeft,
+        _selectionRect.bottomCenter,
+        _selectionRect.bottomRight,
+      ];
+
+      for (final center in handleCenters) {
+        if ((mousePos - center).distance <= handleRadius * 1.5) {
+          isOverHandle = true;
+          break;
+        }
+      }
+
+      // 3. Drag Bar Zone
       final dragBarZone = Rect.fromLTWH(
         _selectionRect.left,
         _selectionRect.top - _dragBarHeight,
@@ -85,7 +110,7 @@ class _RegionSelectorPageState extends State<RegionSelectorPage>
         _dragBarHeight,
       );
 
-      // Toolbar Zone
+      // 4. Toolbar Zone
       final toolbarZone = Rect.fromLTWH(
         _selectionRect.left,
         _selectionRect.bottom,
@@ -93,17 +118,19 @@ class _RegionSelectorPageState extends State<RegionSelectorPage>
         _toolbarHeight + 10,
       );
 
+      // Solid if over Border OR Handle OR Drag Bar OR Toolbar
       bool isOverInteractionZone =
-          expandedRect.contains(mousePos) ||
+          isOverHandle ||
+          isOverBorder ||
           dragBarZone.contains(mousePos) ||
           toolbarZone.contains(mousePos);
 
-      // If locked, we only care about the toolbar
+      // If locked (recording), we ONLY care about the toolbar
       if (_isLocked) {
         isOverInteractionZone = toolbarZone.contains(mousePos);
       }
 
-      // If we are currently resizing/moving, don't ignore events
+      // If we are currently resizing/moving, keep it solid
       if (_activeResizeMode != _ResizeMode.none) {
         isOverInteractionZone = true;
       }
@@ -111,7 +138,6 @@ class _RegionSelectorPageState extends State<RegionSelectorPage>
       if (isOverInteractionZone && _isIgnoringMouseEvents) {
         _isIgnoringMouseEvents = false;
         await windowManager.setIgnoreMouseEvents(false);
-        // Force focus so the next click is a direct interaction, not a focus-gain click
         await windowManager.focus();
       } else if (!isOverInteractionZone && !_isIgnoringMouseEvents) {
         _isIgnoringMouseEvents = true;

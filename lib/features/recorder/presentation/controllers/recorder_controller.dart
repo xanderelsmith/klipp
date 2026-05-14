@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:desktop_screen_recorder/desktop_screen_recorder.dart';
 import '../../../../core/utils/logger.dart';
@@ -85,12 +86,28 @@ class RecorderController extends ChangeNotifier {
       notifyListeners();
       try {
         AppLogger.info('Starting recording: Mode=$recordingMode, Format=$selectedFormat');
+
+        // Scale logical pixels to physical pixels for FFmpeg
+        final dpr = PlatformDispatcher.instance.views.first.devicePixelRatio;
+        
+        int? x, y, width, height;
+        if (_recordingRegion != null) {
+          x = (_recordingRegion!.left * dpr).round();
+          y = (_recordingRegion!.top * dpr).round();
+          width = (_recordingRegion!.width * dpr).round();
+          height = (_recordingRegion!.height * dpr).round();
+          
+          // FFmpeg sometimes requires even dimensions
+          if (width % 2 != 0) width++;
+          if (height % 2 != 0) height++;
+        }
+
         await recorder.startRecording(
           format: _selectedFormat,
-          x: _recordingRegion?.left.toInt(),
-          y: _recordingRegion?.top.toInt(),
-          width: _recordingRegion?.width.toInt(),
-          height: _recordingRegion?.height.toInt(),
+          x: x,
+          y: y,
+          width: width,
+          height: height,
         );
       } catch (e, stackTrace) {
         _isRecording = false;
