@@ -6,7 +6,6 @@ import 'package:screen_retriever/screen_retriever.dart';
 import 'dart:async';
 
 import '../controllers/recorder_controller.dart';
-import '../widgets/audio_meter.dart';
 
 enum _ResizeMode {
   none,
@@ -604,8 +603,6 @@ class _RegionSelectorPageState extends State<RegionSelectorPage>
                 const SizedBox(width: 8),
 
                 // Audio Meter
-                AudioMeter(isRecording: widget.controller.isRecording),
-
                 const SizedBox(width: 12),
 
                 // Duration Timer

@@ -1,0 +1,3 @@
+C:/Users/Xander/AndroidStudioProjects/klipp/desktop_screen_recorder/example/build/windows/x64/_deps/googletest-subbuild/CMakeFiles/googletest-populate.dir
+C:/Users/Xander/AndroidStudioProjects/klipp/desktop_screen_recorder/example/build/windows/x64/_deps/googletest-subbuild/CMakeFiles/ALL_BUILD.dir
+C:/Users/Xander/AndroidStudioProjects/klipp/desktop_screen_recorder/example/build/windows/x64/_deps/googletest-subbuild/CMakeFiles/ZERO_CHECK.dir

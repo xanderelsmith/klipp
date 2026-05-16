@@ -1,0 +1,44 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="18.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <CustomBuild Include="C:\Users\Xander\AndroidStudioProjects\klipp\desktop_screen_recorder\example\build\windows\x64\_deps\googletest-subbuild\CMakeFiles\9f33ae2d6daf89c22bf3513bf5f1693d\googletest-populate-mkdir.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="C:\Users\Xander\AndroidStudioProjects\klipp\desktop_screen_recorder\example\build\windows\x64\_deps\googletest-subbuild\CMakeFiles\9f33ae2d6daf89c22bf3513bf5f1693d\googletest-populate-download.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="C:\Users\Xander\AndroidStudioProjects\klipp\desktop_screen_recorder\example\build\windows\x64\_deps\googletest-subbuild\CMakeFiles\9f33ae2d6daf89c22bf3513bf5f1693d\googletest-populate-update.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="C:\Users\Xander\AndroidStudioProjects\klipp\desktop_screen_recorder\example\build\windows\x64\_deps\googletest-subbuild\CMakeFiles\9f33ae2d6daf89c22bf3513bf5f1693d\googletest-populate-patch.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="C:\Users\Xander\AndroidStudioProjects\klipp\desktop_screen_recorder\example\build\windows\x64\_deps\googletest-subbuild\CMakeFiles\9f33ae2d6daf89c22bf3513bf5f1693d\googletest-populate-configure.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="C:\Users\Xander\AndroidStudioProjects\klipp\desktop_screen_recorder\example\build\windows\x64\_deps\googletest-subbuild\CMakeFiles\9f33ae2d6daf89c22bf3513bf5f1693d\googletest-populate-build.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="C:\Users\Xander\AndroidStudioProjects\klipp\desktop_screen_recorder\example\build\windows\x64\_deps\googletest-subbuild\CMakeFiles\9f33ae2d6daf89c22bf3513bf5f1693d\googletest-populate-install.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="C:\Users\Xander\AndroidStudioProjects\klipp\desktop_screen_recorder\example\build\windows\x64\_deps\googletest-subbuild\CMakeFiles\9f33ae2d6daf89c22bf3513bf5f1693d\googletest-populate-test.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="C:\Users\Xander\AndroidStudioProjects\klipp\desktop_screen_recorder\example\build\windows\x64\_deps\googletest-subbuild\CMakeFiles\fe9aa5ad7a332bf05c7c5de0d00ae72d\googletest-populate-complete.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="C:\Users\Xander\AndroidStudioProjects\klipp\desktop_screen_recorder\example\build\windows\x64\_deps\googletest-subbuild\CMakeFiles\1c605c1079cb744080f065662bb97a1b\googletest-populate.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="C:\Users\Xander\AndroidStudioProjects\klipp\desktop_screen_recorder\example\build\windows\x64\_deps\googletest-subbuild\CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="C:\Users\Xander\AndroidStudioProjects\klipp\desktop_screen_recorder\example\build\windows\x64\_deps\googletest-subbuild\CMakeFiles\googletest-populate" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="CMake Rules">
+      <UniqueIdentifier>{07A2067E-46F1-397D-AEE2-E7850E55D6B7}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

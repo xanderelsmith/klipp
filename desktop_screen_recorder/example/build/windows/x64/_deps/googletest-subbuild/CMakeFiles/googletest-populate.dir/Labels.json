@@ -1,0 +1,46 @@
+{
+	"sources" : 
+	[
+		{
+			"file" : "C:/Users/Xander/AndroidStudioProjects/klipp/desktop_screen_recorder/example/build/windows/x64/_deps/googletest-subbuild/CMakeFiles/googletest-populate"
+		},
+		{
+			"file" : "C:/Users/Xander/AndroidStudioProjects/klipp/desktop_screen_recorder/example/build/windows/x64/_deps/googletest-subbuild/CMakeFiles/1c605c1079cb744080f065662bb97a1b/googletest-populate.rule"
+		},
+		{
+			"file" : "C:/Users/Xander/AndroidStudioProjects/klipp/desktop_screen_recorder/example/build/windows/x64/_deps/googletest-subbuild/CMakeFiles/fe9aa5ad7a332bf05c7c5de0d00ae72d/googletest-populate-complete.rule"
+		},
+		{
+			"file" : "C:/Users/Xander/AndroidStudioProjects/klipp/desktop_screen_recorder/example/build/windows/x64/_deps/googletest-subbuild/CMakeFiles/9f33ae2d6daf89c22bf3513bf5f1693d/googletest-populate-build.rule"
+		},
+		{
+			"file" : "C:/Users/Xander/AndroidStudioProjects/klipp/desktop_screen_recorder/example/build/windows/x64/_deps/googletest-subbuild/CMakeFiles/9f33ae2d6daf89c22bf3513bf5f1693d/googletest-populate-configure.rule"
+		},
+		{
+			"file" : "C:/Users/Xander/AndroidStudioProjects/klipp/desktop_screen_recorder/example/build/windows/x64/_deps/googletest-subbuild/CMakeFiles/9f33ae2d6daf89c22bf3513bf5f1693d/googletest-populate-download.rule"
+		},
+		{
+			"file" : "C:/Users/Xander/AndroidStudioProjects/klipp/desktop_screen_recorder/example/build/windows/x64/_deps/googletest-subbuild/CMakeFiles/9f33ae2d6daf89c22bf3513bf5f1693d/googletest-populate-install.rule"
+		},
+		{
+			"file" : "C:/Users/Xander/AndroidStudioProjects/klipp/desktop_screen_recorder/example/build/windows/x64/_deps/googletest-subbuild/CMakeFiles/9f33ae2d6daf89c22bf3513bf5f1693d/googletest-populate-mkdir.rule"
+		},
+		{
+			"file" : "C:/Users/Xander/AndroidStudioProjects/klipp/desktop_screen_recorder/example/build/windows/x64/_deps/googletest-subbuild/CMakeFiles/9f33ae2d6daf89c22bf3513bf5f1693d/googletest-populate-patch.rule"
+		},
+		{
+			"file" : "C:/Users/Xander/AndroidStudioProjects/klipp/desktop_screen_recorder/example/build/windows/x64/_deps/googletest-subbuild/CMakeFiles/9f33ae2d6daf89c22bf3513bf5f1693d/googletest-populate-test.rule"
+		},
+		{
+			"file" : "C:/Users/Xander/AndroidStudioProjects/klipp/desktop_screen_recorder/example/build/windows/x64/_deps/googletest-subbuild/CMakeFiles/9f33ae2d6daf89c22bf3513bf5f1693d/googletest-populate-update.rule"
+		}
+	],
+	"target" : 
+	{
+		"labels" : 
+		[
+			"googletest-populate"
+		],
+		"name" : "googletest-populate"
+	}
+}
