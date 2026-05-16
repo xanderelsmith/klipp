@@ -42,41 +42,65 @@ class DesktopScreenRecorder {
       // Audio Input
       if (includeAudio && audioDevice != null) {
         args.addAll([
-          '-f', 'dshow',
-          '-i', 'audio=$audioDevice',
+          //  '-itsoffset', '0.020', // Delay audio by 20ms
+          '-thread_queue_size',
+          '1024',
+          '-f',
+          'dshow',
+          '-i',
+          'audio=$audioDevice',
         ]);
       }
 
       // Video Input (gdigrab)
       args.addAll([
-        '-f', 'gdigrab',
-        '-framerate', '30',
+        '-thread_queue_size',
+        '1024',
+        '-f',
+        'gdigrab',
+        '-framerate',
+        '30',
       ]);
 
       if (x != null && y != null && width != null && height != null) {
         args.addAll([
-          '-offset_x', '$x',
-          '-offset_y', '$y',
-          '-video_size', '${width}x$height',
+          '-offset_x',
+          '$x',
+          '-offset_y',
+          '$y',
+          '-video_size',
+          '${width}x$height',
         ]);
       }
 
-      args.addAll(['-i', 'desktop']);
+      args.addAll([
+        // '-itsoffset', '0.050', // Delay video by 50ms (increase this to delay more)
+        '-itsoffset', '0.500',
+
+        '-i', 'desktop'
+      ]);
 
       // Encoding settings
       args.addAll([
-        '-c:v', 'libx264',
-        '-preset', 'ultrafast',
+        '-c:v',
+        'libx264',
+        '-preset',
+        'ultrafast',
       ]);
 
       if (includeAudio && audioDevice != null) {
-        args.addAll(['-c:a', 'aac', '-b:a', '128k']);
+        args.addAll([
+          //  '-itsoffset', '0.020', // Delay audio by 20ms
+          '-af',
+          'aresample=async=1',
+          '-c:a',
+          'aac',
+          '-b:a',
+          '128k',
+        ]);
       }
 
-      args.addAll([
-        '-y',
-        _currentOutputPath!
-      ]);
+      args.addAll(['-y', _currentOutputPath!]);
 
       _recordingProcess = await Process.start('ffmpeg', args);
 
@@ -164,21 +188,18 @@ class DesktopScreenRecorder {
   /// Lists available DirectShow audio devices on Windows.
   Future<List<String>> listAudioDevices() async {
     try {
-      final process = await Process.run('ffmpeg', [
-        '-list_devices', 'true',
-        '-f', 'dshow',
-        '-i', 'dummy'
-      ]);
+      final process = await Process.run(
+          'ffmpeg', ['-list_devices', 'true', '-f', 'dshow', '-i', 'dummy']);
 
       // FFmpeg outputs device lists to stderr
       final output = process.stderr.toString();
       final List<String> devices = [];
-      
+
       // FFmpeg 8.x uses [in#N @ addr] tags instead of [dshow @ addr]
       // Match any log-prefix tag followed by a quoted name and (audio)
       final regExp = RegExp(r'\[[^\]]+\]\s+"([^"]+)"\s+\(audio\)');
       final matches = regExp.allMatches(output);
-      
+
       for (final match in matches) {
         if (match.groupCount >= 1) {
           devices.add(match.group(1)!);
